@@ -27,30 +27,9 @@ class App extends React.Component {
 		    	lr: -100,
 		    	Ms: 300,
 		    	rmin: 1,
-		    	ymax: 2500   		
-	    	},
-	    	eq: {
-	    		y: 0,
-	    		r: 0
-	    	},
-	    	data: [
-	    		{
-	    			x: [],
-		            y: [],
-		            type: 'scatter',
-		            mode: 'lines'
-		        },
-		        {
-		            x: [],
-		            y: [],
-		            type: 'scatter',
-		            mode: 'lines'
-		        }
-	    	],
-	    	layout: {
-				autosize: true,
-				yaxis: {range: [0,10]}
-			}
+		    	ymax: 2500,
+		    	rmax: 10 		
+	    	}
 	    };
 
 	    this.handleChange = this.handleChange.bind(this);
@@ -60,7 +39,6 @@ class App extends React.Component {
 
 	componentDidMount() {
 		this.computeEquilibrium();
-		this.get_curves();
 	}
 
 	handleChange(event) {
@@ -73,15 +51,13 @@ class App extends React.Component {
 		// })
 
 		let partialState = Object.assign({}, this.state);
-		partialState.params[event.target.name] = event.target.value;
+		partialState.params[event.target.name] = parseFloat(event.target.value);
 		if(event.target.name === 'p'){
-			partialState.params.p1 = event.target.value/100
+			partialState.params.p1 = parseFloat(event.target.value)/100
 		}
 		this.setState({ partialState });
 
 		this.computeEquilibrium();
-		this.get_curves();
-
 	}
 
 	computeEquilibrium() {
@@ -96,20 +72,29 @@ class App extends React.Component {
 				y: y/denom,
 				r: r/denom
 			}
-		})
+		}, function() {this.get_curves()})
 		// console.log("y:",y/denom,"r:",r,"denom",denom);
+		// this.get_curves(y_star,r_star);
 	}
 
 	get_curves() {
-		const revenu = [...Array(this.state.params.ymax).keys()];
+		const revenu = [];
+		for( let i = 0; i < this.state.params.ymax; i++){
+			revenu.push(i)
+		}
 		var r_is = []
 		var r_lm = []
 
 		const params = Object.assign({}, this.state.params);
 		for(let y of revenu){
 			r_is.push(((1-params.alpha-params.iy)*y+params.alpha*params.t-params.cpi-params.id*params.D/params.p1-params.bari-params.g)/params.ir);
-			r_lm.push(1/params.ir*(params.Ms/params.p1-params.ly*y));
+			let tmp = 1/params.lr*(params.Ms/params.p1-params.ly*y)
+			tmp = (tmp > params.rmin) ? tmp : params.rmin
+			r_lm.push(tmp);
 		}
+
+		const y_star = this.state.eq.y
+		const r_star = this.state.eq.r
 
 		this.setState({
 			data: [
@@ -117,25 +102,110 @@ class App extends React.Component {
 	    			x: revenu,
 		            y: r_is,
 		            type: 'scatter',
-		            mode: 'lines'
+		            mode: 'lines',
+		            name: "IS",
+		            line: {
+		            	color: "red"
+		            },
+		            hovertemplate: 
+		            	'y: %{x:.0f}' +
+                        '<br>r: %{y:.2f}' +
+                        '<extra></extra>'
 		        },
 		        {
 		            x: revenu,
 		            y: r_lm,
 		            type: 'scatter',
-		            mode: 'lines'
+		            mode: 'lines',
+		            name: "LM",
+		            line: {
+		            	color: "blue",
+		            },
+		            hovertemplate: 
+		            	'y: %{x:.0f}' +
+                        '<br>r: %{y:.2f}' +
+                        '<extra></extra>'
+		        },
+		        {
+		        	x: [0,y_star],
+		        	y: [r_star,r_star],
+		        	mode: 'lines+markers',
+		        	line: {
+		        		dash: 'dot'
+		        	},
+		        	showlegend: false,
+		            hovertemplate: 
+		            	'y: %{x:.0f}' +
+                        '<br>r: %{y:.2f}' +
+                        '<extra></extra>'
+		        },
+		        {
+		        	x: [y_star,y_star],
+		        	y: [0,r_star],
+		        	mode: 'lines+markers',
+		        	line: {
+		        		dash: 'dot',
+		        		color: 'green'
+		        	},
+		        	showlegend: false,
+		            hovertemplate: 
+		            	'y: %{x:.0f}' +
+                        '<br>r: %{y:.2f}' +
+                        '<extra></extra>'
 		        }
 	    	]
 		})
-		// console.log(this.state.data.lm)
+
+		this.setState({
+	    	layout: {
+				autosize: true,
+				showlegend: true,
+				hovermode: 'closest',
+				margin: {
+					l: 50,
+					r: 50,
+					b: 50,
+					t: 50,
+					pad: 4
+				},
+				paper_bgcolor: '#cecece',
+  		// 		plot_bgcolor: '#cccccc',
+				yaxis: {
+					title: "Taux d'intérêt, r",
+					titlefont: {
+				      	family: 'Arial, sans-serif',
+				      	size: 18,
+				      	color: '#333'
+				    },
+					range: [0,this.state.params.rmax]
+				},
+				xaxis: {
+					title: 'Revenu, y',
+					titlefont: {
+				      	family: 'Arial, sans-serif',
+				      	size: 18,
+				      	color: '#333'
+				    },
+					range: [0,this.state.params.ymax]
+				},
+				annotations: [
+					{
+						x: y_star,
+						y: r_star,
+						text: 'y*=' + Math.round(y_star) + ', r*=' + Math.round(r_star*100)/100
+					}
+				]
+			}
+		})
+		// console.log(y_star, ", ", r_star)
 	}
 
 	render() {
 		return (
       		<div id = "page-wrapper">
+				<h1>Le modèle IS LM</h1>
 				<div className="row">
 				    <div className="block-3">
-						<h1>Le modèle IS LM</h1>
 				    	<div id="settings">
 				    		<h4><u>Paramètres globaux</u></h4>
 							<div className="row">
@@ -143,7 +213,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$p:$</Latex>
-								          <input name="p" value={this.state.params.p} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="p" value={this.state.params.p} step="1" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -151,7 +221,15 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$y$ max:</Latex>
-								          <input name="ymax" value={this.state.params.ymax} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="ymax" value={this.state.params.ymax} step="10" className="entry-form" type="number" onChange={this.handleChange} />
+								        </label>
+								    </div>
+								</div>
+								<div className="block-3">
+									<div className="entry">
+								        <label>
+								          <Latex>$r$ max:</Latex>
+								          <input name="rmax" value={this.state.params.rmax} step="0.5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -162,7 +240,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$\alpha:$</Latex>
-								          <input name="alpha" value={this.state.params.alpha} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="alpha" value={this.state.params.alpha} step="0.05" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -170,7 +248,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$I_y:$</Latex>
-								          <input name="iy" value={this.state.params.iy} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="iy" value={this.state.params.iy} step="0.01" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -178,7 +256,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$I_r:$</Latex>
-								          <input name="ir" value={this.state.params.ir} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="ir" value={this.state.params.ir} step="1" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -186,7 +264,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$I_D:$</Latex>
-								          <input name="id" value={this.state.params.id} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="id" value={this.state.params.id} step="0.05" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -196,7 +274,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$C_\pi:$</Latex>
-								          <input name="cpi" value={this.state.params.cpi} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="cpi" value={this.state.params.cpi} step="5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -204,7 +282,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$I_0:$</Latex>
-								          <input name="bari" value={this.state.params.bari} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="bari" value={this.state.params.bari} step="5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -212,7 +290,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$g:$</Latex>
-								          <input name="g" value={this.state.params.g} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="g" value={this.state.params.g} step="5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -220,7 +298,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$t:$</Latex>
-								          <input name="t" value={this.state.params.t} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="t" value={this.state.params.t} step="5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -231,7 +309,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$L_y:$</Latex>
-								          <input name="ly" value={this.state.params.ly} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="ly" value={this.state.params.ly} step="0.05" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -239,7 +317,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$L_r:$</Latex>
-								          <input name="lr" value={this.state.params.lr} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="lr" value={this.state.params.lr} step="1" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -247,7 +325,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$M^s:$</Latex>
-								          <input name="Ms" value={this.state.params.Ms} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="Ms" value={this.state.params.Ms} step="5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -255,7 +333,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <Latex>$r_0:$</Latex>
-								          <input name="rmin" value={this.state.params.rmin} className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="rmin" value={this.state.params.rmin} step="0.5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -272,7 +350,6 @@ class App extends React.Component {
 						    />
 					    </div>
 				    </div>
-				    
 				</div>
       		</div>
 		)

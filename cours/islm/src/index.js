@@ -33,15 +33,34 @@ class App extends React.Component {
 	    		y: 0,
 	    		r: 0
 	    	},
-	    	values: {
-	    		is: [],
-	    		lm: []
-	    	}
+	    	data: [
+	    		{
+	    			x: [],
+		            y: [],
+		            type: 'scatter',
+		            mode: 'lines'
+		        },
+		        {
+		            x: [],
+		            y: [],
+		            type: 'scatter',
+		            mode: 'lines'
+		        }
+	    	],
+	    	layout: {
+				autosize: true,
+				yaxis: {range: [0,10]}
+			}
 	    };
-	    
+
 	    this.handleChange = this.handleChange.bind(this);
 	    this.computeEquilibrium = this.computeEquilibrium.bind(this);
-	    this.get_curves = this.get_curves.bind
+	    this.get_curves = this.get_curves.bind(this);
+	}
+
+	componentDidMount() {
+		this.computeEquilibrium();
+		this.get_curves();
 	}
 
 	handleChange(event) {
@@ -61,6 +80,7 @@ class App extends React.Component {
 		this.setState({ partialState });
 
 		this.computeEquilibrium();
+		this.get_curves();
 
 	}
 
@@ -81,7 +101,33 @@ class App extends React.Component {
 	}
 
 	get_curves() {
+		const revenu = [...Array(this.state.params.ymax).keys()];
+		var r_is = []
+		var r_lm = []
 
+		const params = Object.assign({}, this.state.params);
+		for(let y of revenu){
+			r_is.push(((1-params.alpha-params.iy)*y+params.alpha*params.t-params.cpi-params.id*params.D/params.p1-params.bari-params.g)/params.ir);
+			r_lm.push(1/params.ir*(params.Ms/params.p1-params.ly*y));
+		}
+
+		this.setState({
+			data: [
+	    		{
+	    			x: revenu,
+		            y: r_is,
+		            type: 'scatter',
+		            mode: 'lines'
+		        },
+		        {
+		            x: revenu,
+		            y: r_lm,
+		            type: 'scatter',
+		            mode: 'lines'
+		        }
+	    	]
+		})
+		// console.log(this.state.data.lm)
 	}
 
 	render() {
@@ -218,7 +264,12 @@ class App extends React.Component {
 				    </div>
 				    <div className="block-9">
 				    	<div  id="model">
-					        <Diag data={this.state.data}/>
+					        <Plot
+					        	data={this.state.data}
+						        layout={this.state.layout}
+						        style={{width: "100%", height: "100%"}}
+						        useResizeHandler={true}
+						    />
 					    </div>
 				    </div>
 				    
@@ -228,68 +279,43 @@ class App extends React.Component {
 	}
 }
 
-// class Params extends React.Component {
-//   constructor(props) {
-//     super(props);
-//     this.state = {value: ''};
-
-//     this.handleChange = this.handleChange.bind(this);
-//     this.handleSubmit = this.handleSubmit.bind(this);
-//   }
-
-//   handleChange(event) {
-//     this.setState({value: event.target.value});
-//   }
-
-//   handleSubmit(event) {
-//     alert('A name was submitted: ' + this.state.value);
-//     event.preventDefault();
-//   }
+// class Diag extends React.Component {
+// 	constructor(props) {
+// 		super(props)
+// 		this.trace1 = {
+//             x: props.data.y,
+//             y: props.data.is,
+//             type: 'scatter',
+//             mode: 'lines+markers',
+//             marker: {color: 'red'},
+//           }
+//         this.trace2 = {
+//             x: props.data.y,
+//             y: props.data.lm,
+//             type: 'scatter',
+//             mode: 'lines+markers',
+//             marker: {color: 'blue'},
+//           }
+// 		this.state = {
+// 			data: [this.trace1,this.trace2], 
+// 			layout: {
+// 				autosize: true
+// 			}
+// 		}
+// 		console.log(props)
+// 	}
 
 //   render() {
 //     return (
-
+//       <Plot
+//         data={this.state.data}
+//         layout={this.state.layout}
+//         style={{width: "100%", height: "100%"}}
+//         useResizeHandler={true}
+//       />
 //     );
 //   }
 // }
-
-class Diag extends React.Component {
-	constructor(props) {
-		super(props)
-		this.trace1 = {
-            x: [1, 2, 3],
-            y: [2, 6, 3],
-            type: 'scatter',
-            mode: 'lines+markers',
-            name: props.name,
-            marker: {color: 'red'},
-          }
-        this.trace2 = {
-            x: [1, 2, 3],
-            y: [1, 8, 3],
-            type: 'scatter',
-            mode: 'lines+markers',
-            marker: {color: 'blue'},
-          }
-		this.state = {
-			data: [this.trace1,this.trace2], 
-			layout: {
-				autosize: true
-			}
-		}
-	}
-
-  render() {
-    return (
-      <Plot
-        data={this.state.data}
-        layout={this.state.layout}
-        style={{width: "100%", height: "100%"}}
-        useResizeHandler={true}
-      />
-    );
-  }
-}
 
 ReactDOM.render(
   <App />,

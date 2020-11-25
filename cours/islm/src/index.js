@@ -1,11 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import Plotly from 'plotly.js-basic-dist'// see https://github.com/plotly/plotly.js/tree/master/dist#partial-bundles
+import Plotly from 'plotly.js-basic-dist';// see https://github.com/plotly/plotly.js/tree/master/dist#partial-bundles
 import createPlotlyComponent from "react-plotly.js/factory";
-const Plot = createPlotlyComponent(Plotly);
+import {InlineMath, BlockMath} from 'react-katex';
 
-var Latex = require('react-latex');
+const Plot = createPlotlyComponent(Plotly);
 
 const var_is = ["alpha","iy","ir","id","cpi","bari","g","t"]
 const var_lm = ["ly","lr","Ms"]
@@ -349,7 +349,7 @@ class App extends React.Component {
 				paper_bgcolor: '#cecece',
   		// 		plot_bgcolor: '#cccccc',
 				yaxis: {
-					title: "Taux d'intérêt, r",
+					title: "Interest rate, r",
 					titlefont: {
 				      	family: 'Arial, sans-serif',
 				      	size: 18,
@@ -358,7 +358,7 @@ class App extends React.Component {
 					range: [0,this.state.params.rmax]
 				},
 				xaxis: {
-					title: 'Revenu, y',
+					title: 'Income, y',
 					titlefont: {
 				      	family: 'Arial, sans-serif',
 				      	size: 18,
@@ -381,43 +381,43 @@ class App extends React.Component {
 	render() {
 		return (
       		<div id = "page-wrapper">
-				<h1>Le modèle IS LM</h1>
+				<h1>The IS LM Model</h1>
 				<div className="row">
 				    <div className="block-3">
 				    	<div id="settings">
-				    		<h4><u>Paramètres globaux</u></h4>
+				    		<h4><u>Global parameters</u></h4>
 							<div className="row">
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$p:$</Latex>
+								          <InlineMath math="p" />
 								          <input name="p" value={this.state.params.p} step="1" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
-								<div className="block-3">
+								<div className="block-4">
 									<div className="entry">
 								        <label>
-								          <Latex>$y$ max:</Latex>
+								         <InlineMath math="y_{max}" />
 								          <input name="ymax" value={this.state.params.ymax} step="10" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
-								<div className="block-3">
+								<div className="block-4">
 									<div className="entry">
 								        <label>
-								          <Latex>$r$ max:</Latex>
+								          <InlineMath math="r_{max}" />
 								          <input name="rmax" value={this.state.params.rmax} step="0.5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
 							</div>
-				    		<h4><u>Paramètres de IS</u></h4>
+				    		<h4><u>IS parameters</u></h4>
 							<div className="row">
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$\alpha:$</Latex>
+								          <InlineMath math="\alpha" />
 								          <input name="alpha" value={this.state.params.alpha} step="0.05" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
@@ -425,7 +425,7 @@ class App extends React.Component {
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$I_y:$</Latex>
+								          <InlineMath math="I_y" />
 								          <input name="iy" value={this.state.params.iy} step="0.01" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
@@ -433,7 +433,7 @@ class App extends React.Component {
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$I_r:$</Latex>
+								          <InlineMath math="I_r" />
 								          <input name="ir" value={this.state.params.ir} step="1" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
@@ -441,7 +441,7 @@ class App extends React.Component {
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$I_D:$</Latex>
+								          <InlineMath math="I_D" />
 								          <input name="id" value={this.state.params.id} step="0.05" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
@@ -451,7 +451,7 @@ class App extends React.Component {
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$C_\pi:$</Latex>
+								          <InlineMath math="C_{\pi}" />
 								          <input name="cpi" value={this.state.params.cpi} step="5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
@@ -459,7 +459,7 @@ class App extends React.Component {
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$I_0:$</Latex>
+								          <InlineMath math="I_0" />
 								          <input name="bari" value={this.state.params.bari} step="5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
@@ -467,7 +467,7 @@ class App extends React.Component {
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$g:$</Latex>
+								          <InlineMath math="g" />
 								          <input name="g" value={this.state.params.g} step="5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
@@ -475,18 +475,18 @@ class App extends React.Component {
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$t:$</Latex>
+								          <InlineMath math="t" />
 								          <input name="t" value={this.state.params.t} step="5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
 							</div>
-							<h4><u>Paramètres de LM</u></h4>
+							<h4><u>LM parameters</u></h4>
 							<div className="row">
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$L_y:$</Latex>
+								          <InlineMath math="L_y" />
 								          <input name="ly" value={this.state.params.ly} step="0.05" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
@@ -494,7 +494,7 @@ class App extends React.Component {
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$L_r:$</Latex>
+								          <InlineMath math="L_r" />
 								          <input name="lr" value={this.state.params.lr} step="1" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
@@ -502,7 +502,7 @@ class App extends React.Component {
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$M^s:$</Latex>
+								          <InlineMath math="M^s" />
 								          <input name="Ms" value={this.state.params.Ms} step="5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
@@ -510,23 +510,18 @@ class App extends React.Component {
 								<div className="block-3">
 									<div className="entry">
 								        <label>
-								          <Latex>$r_0:$</Latex>
+								          <InlineMath math="r_{min}" />
 								          <input name="rmin" value={this.state.params.rmin} step="0.5" className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
 							</div>
-							<h4><u>Chocs</u></h4>
-							<div className="row">
-								<div className="block-2">
-									<p className="center">
-								        <u>Choc 1:</u>
-								    </p>
-								</div>							
-								<div className="block-4">
+							<h4><u>Shocks</u></h4>
+							<div className="row">					
+								<div className="block-5">
 									<div className="entry">
 								        <label>
-									        Var. choquée:
+									        Var. 1:
 									        <select className="shocked_var" name="shocked_var_1" value={this.state.shocks.shocked_var_1} onChange={this.handleShock}>
 									        	<option value=""></option>
 												<option value="p">p</option>
@@ -548,22 +543,17 @@ class App extends React.Component {
 								<div className="block-5">
 									<div className="entry">
 								        <label>
-								          Nouvelle valeur:
+								          Value:
 								          <input name="new_val_1" value={this.state.shocks.new_val_1} step="1" className="entry-form" type="number" onChange={this.handleShock} />
 								        </label>
 								    </div>
 								</div>
 							</div>
 							<div className="row">
-								<div className="block-2">
-									<p className="center">
-								        <u>Choc 2:</u>
-								    </p>
-								</div>	
-								<div className="block-4">
+								<div className="block-5">
 									<div className="entry">
 								        <label>
-									        Var. choquée:
+									        Var. 2:
 									        <select className="shocked_var" name="shocked_var_2" value={this.state.shocks.shocked_var_2} onChange={this.handleShock}>
 									        	<option value=""></option>
 												<option value="p">p</option>
@@ -585,7 +575,7 @@ class App extends React.Component {
 								<div className="block-5">
 									<div className="entry">
 								        <label>
-								          Nouvelle valeur:
+								          Value:
 								          <input name="new_val_2" value={this.state.shocks.new_val_2} step="1" className="entry-form" type="number" onChange={this.handleShock} />
 								        </label>
 								    </div>
@@ -649,5 +639,5 @@ class App extends React.Component {
 
 ReactDOM.render(
   <App />,
-  document.getElementById('root')
+  document.getElementById('root-islm')
 );

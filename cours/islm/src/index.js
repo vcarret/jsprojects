@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import Plotly from 'plotly.js-basic-dist';// see https://github.com/plotly/plotly.js/tree/master/dist#partial-bundles
 import createPlotlyComponent from "react-plotly.js/factory";
+// import 'katex/dist/katex.min.css';
 import {InlineMath, BlockMath} from 'react-katex';
 
 const Plot = createPlotlyComponent(Plotly);
@@ -10,13 +11,27 @@ const Plot = createPlotlyComponent(Plotly);
 const var_is = ["alpha","iy","ir","id","cpi","bari","g","t"]
 const var_lm = ["ly","lr","Ms"]
 
+const steps = {
+	"p": 0.01,
+	"alpha": 0.05,
+	"iy": 0.01,
+	"ir": 1,
+	"id": 0.01,
+	"cpi": 5,
+	"bari": 5,
+	"g": 5,
+	"t": 5,
+	"ly": 0.05,
+	"lr": 1,
+	"Ms": 5
+}
+
 class App extends React.Component {
 	constructor(props) {
 		super(props);
 	    this.state = {
 	    	params: {
-		    	p: 100,
-		    	p1: 1,
+		    	p: 1,
 		    	alpha: 0.6,
 		    	iy: 0.05,
 		    	ir: -100,
@@ -178,7 +193,7 @@ class App extends React.Component {
 				partialState.data[3+shock_n*2].x = [];
 				partialState.data[3+shock_n*2].y = [];
 				this.setState(partialState, function() {
-					this.computeEquilibrium(this.state.params, "normal");
+					this.computeEquilibrium(this.state.params, "");
 				});
 			// }
 		} else if (target.className === 'entry-form'){
@@ -187,16 +202,16 @@ class App extends React.Component {
 					partialState.shocks[target.name] = parseFloat(target.value);
 					let shocked_params = Object.assign({}, this.state.params);
 					// If the other shock was on the prices, we have to take it into account
-					let other_shock = Math.abs(shock_n-2)+1
-					if(this.state.shocks["shocked_var_"+other_shock] === "p"){
-						shocked_params.p = this.state.shocks["new_val_"+other_shock]
-						shocked_params.p1 = shocked_params.p/100
+					// In fact we will always take the first shock into account
+					if(shock_n === "2"){
+						if(this.state.shocks.new_val_1){
+							shocked_params[this.state.shocks.shocked_var_1] = this.state.shocks.new_val_1;
+						}
 					}
 					const shocked_var = this.state.shocks["shocked_var_"+shock_n]
 					shocked_params[shocked_var] = parseFloat(target.value);
 					let islmboth = 0;
 					if(shocked_var === "p"){
-						shocked_params.p1 = parseFloat(target.value/100);
 						islmboth = 3;
 					} else if(var_is.includes(shocked_var)){
 						islmboth = 1;
@@ -205,15 +220,17 @@ class App extends React.Component {
 					}
 					this.setState(partialState, function() {
 						this.computeEquilibrium(shocked_params,"shock_"+shock_n+""+islmboth);
-						// Shocks are cumulated so if p is changed in the other shock it must impact the current shock
-						if(shocked_var === "p"){
-							let other_var = this.state.shocks["shocked_var_"+other_shock]
-							if(other_var !== "p" & other_var !== ""){
-								shocked_params[other_var] = this.state.shocks["new_val_"+other_shock]
+						// Shocks are cumulated so if something is changed in the first shock it must impact the second shock
+						if(shock_n === "1"){
+							let other_var = this.state.shocks.shocked_var_2
+							if(other_var){
+								shocked_params[other_var] = this.state.shocks.new_val_2
 								if(var_is.includes(other_var)){
-									this.computeEquilibrium(shocked_params,"shock_"+other_shock+""+1);
-								} else{
-									this.computeEquilibrium(shocked_params,"shock_"+other_shock+""+2);
+									this.computeEquilibrium(shocked_params,"shock_2"+1);
+								} else if(var_lm.includes(other_var)){
+									this.computeEquilibrium(shocked_params,"shock_2"+2);
+								} else if(other_var === "p"){
+									this.computeEquilibrium(shocked_params,"shock_2"+3);
 								}
 							}
 						}
@@ -244,12 +261,21 @@ class App extends React.Component {
 
 		let partialState = Object.assign({}, this.state);
 		partialState.params[event.target.name] = parseFloat(event.target.value);
-		if(event.target.name === 'p'){
-			partialState.params.p1 = parseFloat(event.target.value)/100
-		}
 		this.setState(partialState);
 
 		this.computeEquilibrium(this.state.params, "normal");
+		if(event.target.name === "rmin"){
+			let shocked_params = Object.assign({}, this.state.params);
+			console.log(this.state.shocks.new_val_1 && !var_is.includes(this.state.shocks.shocked_var_1))
+			if(this.state.shocks.new_val_1 && !var_is.includes(this.state.shocks.shocked_var_1)){
+				shocked_params[this.state.shocks.shocked_var_1] = this.state.shocks.new_val_1;
+				this.computeEquilibrium(shocked_params, "shock_12");
+			}
+			if(this.state.shocks.new_val_2 && !var_is.includes(this.state.shocks.shocked_var_2)){
+				shocked_params[this.state.shocks.shocked_var_2] = this.state.shocks.new_val_2;
+				this.computeEquilibrium(shocked_params, "shock_22");
+			}
+		}
 	}
 
 	computeEquilibrium(params, draw) {
@@ -257,54 +283,42 @@ class App extends React.Component {
 		let shocked_params = Object.assign({}, params);
 		if(this.state.shocks.new_val_1){
 			shocked_params[this.state.shocks.shocked_var_1] = this.state.shocks.new_val_1;
-			if(this.state.shocks.shocked_var_1 === 'p'){
-				shocked_params.p1 = shocked_params.p/100;
-			}
 		}
 		if(this.state.shocks.new_val_2){
 			shocked_params[this.state.shocks.shocked_var_2] = this.state.shocks.new_val_2;
-			if(this.state.shocks.shocked_var_2 === 'p'){
-				shocked_params.p1 = shocked_params.p/100;
-			}
 		}
 
 		const denom = shocked_params.lr*(1-shocked_params.alpha-shocked_params.iy) + shocked_params.ir*shocked_params.ly
 
-		const r = shocked_params.Ms/shocked_params.p1*(1-shocked_params.alpha-shocked_params.iy) - shocked_params.ly*(-shocked_params.alpha*shocked_params.t+shocked_params.cpi+shocked_params.id*shocked_params.D/shocked_params.p1+shocked_params.bari+shocked_params.g);
+		const r = shocked_params.Ms/shocked_params.p*(1-shocked_params.alpha-shocked_params.iy) - shocked_params.ly*(-shocked_params.alpha*shocked_params.t+shocked_params.cpi+shocked_params.id*shocked_params.D/shocked_params.p+shocked_params.bari+shocked_params.g);
 		let r_star = r/denom
 		let y_star = 0
-		if(r_star < this.state.params.rmin){
+		if(r_star < this.state.params.rmin){// Liquidity trap
 			r_star = this.state.params.rmin
-			y_star = (-shocked_params.alpha*shocked_params.t+shocked_params.cpi+shocked_params.id*shocked_params.D/shocked_params.p1+shocked_params.bari+shocked_params.g+r_star*shocked_params.ir)/(1-shocked_params.alpha-shocked_params.iy)
+			y_star = (-shocked_params.alpha*shocked_params.t+shocked_params.cpi+shocked_params.id*shocked_params.D/shocked_params.p+shocked_params.bari+shocked_params.g+r_star*shocked_params.ir)/(1-shocked_params.alpha-shocked_params.iy)
 		} else{
-			const y = (-shocked_params.alpha*shocked_params.t+shocked_params.cpi+shocked_params.id*shocked_params.D/shocked_params.p1+shocked_params.bari+shocked_params.g)*shocked_params.lr+shocked_params.ir*shocked_params.Ms/shocked_params.p1;
+			const y = (-shocked_params.alpha*shocked_params.t+shocked_params.cpi+shocked_params.id*shocked_params.D/shocked_params.p+shocked_params.bari+shocked_params.g)*shocked_params.lr+shocked_params.ir*shocked_params.Ms/shocked_params.p;
 			y_star = y/denom
 
 		}
-
-		// this.setState({
-		// 	eq: {
-		// 		y: y_star,
-		// 		r: r_star
-		// 	}
-		// })
 	
 		const revenu = [];
 		for( let i = 0; i < this.state.params.ymax; i++){
 			revenu.push(i)
 		}
-		var r_is = []
-		var r_lm = []
+		var r_is = [];
+		var r_lm = [];
 
+		let tmp = 0;
 		for(let y of revenu){
-			r_is.push(((1-params.alpha-params.iy)*y+params.alpha*params.t-params.cpi-params.id*params.D/params.p1-params.bari-params.g)/params.ir);
-			let tmp = 1/params.lr*(params.Ms/params.p1-params.ly*y)
-			tmp = (tmp > params.rmin) ? tmp : params.rmin
+			r_is.push(((1-params.alpha-params.iy)*y+params.alpha*params.t-params.cpi-params.id*params.D/params.p-params.bari-params.g)/params.ir);
+			tmp = 1/params.lr*(params.Ms/params.p-params.ly*y);
+			tmp = (tmp > params.rmin) ? tmp : params.rmin;
 			r_lm.push(tmp);
 		}
 
 		let partialState = Object.assign({}, this.state);
-		if(draw === "normal"){
+		if(draw === "normal"){// Draw the first two curves
 			partialState.data[0].x = revenu;
 			partialState.data[0].y = r_is;
 			partialState.data[1].x = revenu;
@@ -391,7 +405,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <InlineMath math="p" />
-								          <input name="p" value={this.state.params.p} step="1" className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="p" value={this.state.params.p} step={steps.p} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -418,7 +432,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <InlineMath math="\alpha" />
-								          <input name="alpha" value={this.state.params.alpha} step="0.05" className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="alpha" value={this.state.params.alpha} step={steps.alpha} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -426,7 +440,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <InlineMath math="I_y" />
-								          <input name="iy" value={this.state.params.iy} step="0.01" className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="iy" value={this.state.params.iy} step={steps.iy} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -434,7 +448,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <InlineMath math="I_r" />
-								          <input name="ir" value={this.state.params.ir} step="1" className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="ir" value={this.state.params.ir} step={steps.ir} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -442,7 +456,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <InlineMath math="I_D" />
-								          <input name="id" value={this.state.params.id} step="0.05" className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="id" value={this.state.params.id} step={steps.id} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -452,7 +466,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <InlineMath math="C_{\pi}" />
-								          <input name="cpi" value={this.state.params.cpi} step="5" className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="cpi" value={this.state.params.cpi} step={steps.cpi} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -460,7 +474,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <InlineMath math="I_0" />
-								          <input name="bari" value={this.state.params.bari} step="5" className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="bari" value={this.state.params.bari} step={steps.bari} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -468,7 +482,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <InlineMath math="g" />
-								          <input name="g" value={this.state.params.g} step="5" className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="g" value={this.state.params.g} step={steps.g} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -476,7 +490,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <InlineMath math="t" />
-								          <input name="t" value={this.state.params.t} step="5" className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="t" value={this.state.params.t} step={steps.t} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -487,7 +501,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <InlineMath math="L_y" />
-								          <input name="ly" value={this.state.params.ly} step="0.05" className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="ly" value={this.state.params.ly} step={steps.ly} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -495,7 +509,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <InlineMath math="L_r" />
-								          <input name="lr" value={this.state.params.lr} step="1" className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="lr" value={this.state.params.lr} step={steps.lr} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -503,7 +517,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          <InlineMath math="M^s" />
-								          <input name="Ms" value={this.state.params.Ms} step="5" className="entry-form" type="number" onChange={this.handleChange} />
+								          <input name="Ms" value={this.state.params.Ms} step={steps.Ms} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>
@@ -517,7 +531,7 @@ class App extends React.Component {
 								</div>
 							</div>
 							<h4><u>Shocks</u></h4>
-							<div className="row">					
+							<div className="row">
 								<div className="block-5">
 									<div className="entry">
 								        <label>
@@ -544,7 +558,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          Value:
-								          <input name="new_val_1" value={this.state.shocks.new_val_1} step="1" className="entry-form" type="number" onChange={this.handleShock} />
+								          <input name="new_val_1" value={this.state.shocks.new_val_1} step={steps[this.state.shocks.shocked_var_1]} className="entry-form" type="number" onChange={this.handleShock} />
 								        </label>
 								    </div>
 								</div>
@@ -576,7 +590,7 @@ class App extends React.Component {
 									<div className="entry">
 								        <label>
 								          Value:
-								          <input name="new_val_2" value={this.state.shocks.new_val_2} step="1" className="entry-form" type="number" onChange={this.handleShock} />
+								          <input name="new_val_2" value={this.state.shocks.new_val_2} step={steps[this.state.shocks.shocked_var_2]} className="entry-form" type="number" onChange={this.handleShock} />
 								        </label>
 								    </div>
 								</div>

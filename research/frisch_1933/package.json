@@ -1,0 +1,45 @@
+{
+  "name": "frisch_1933",
+  "version": "0.1.0",
+  "private": true,
+  "homepage": "https://hetmodels.com/assets/frisch_1933/",
+  "dependencies": {
+    "@testing-library/jest-dom": "^5.11.6",
+    "@testing-library/react": "^11.2.0",
+    "@testing-library/user-event": "^12.2.2",
+    "plotly.js": "^1.57.1",
+    "plotly.js-basic-dist": "^1.57.1",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "react-katex": "^2.0.2",
+    "react-latex": "^2.0.0",
+    "react-mathjax": "^1.0.1",
+    "react-plotly.js": "^2.5.0",
+    "react-scripts": "4.0.0",
+    "web-vitals": "^0.2.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

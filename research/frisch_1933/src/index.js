@@ -5,11 +5,12 @@ import Plotly from 'plotly.js-basic-dist';// see https://github.com/plotly/plotl
 import createPlotlyComponent from "react-plotly.js/factory";
 // import 'katex/dist/katex.min.css';
 import {InlineMath} from 'react-katex';
+import {exp,evaluate,pow,divide,multiply,add,subtract,cos,pi,sqrt,abs,log,round,complex} from 'mathjs'
 
 const Plot = createPlotlyComponent(Plotly);
 
 const steps = {
-	"eps": 0.5,
+	"eps": 1,
 	"tfinal": 5,
 	"m": 0.1,
 	"lam": 0.01,
@@ -18,15 +19,119 @@ const steps = {
 	"mu": 0.5,
 	"shock": 0.1,
 	"h": 1,
-	"c": 0.05
+	"c": 0.01,
+	"ncomps": 1
 }
 
 function iFT(t,h){
-	return(Math.round(t/h))
+	return(round(t/h))
 }
 
 function yt(m,mu,x,t,h){
-  return(m*x[iFT(t,h)]+mu*(x[iFT(t+h,h)]-x[iFT(t,h)])/h)
+  	return(m*x[iFT(t,h)]+mu*(x[iFT(t+h,h)]-x[iFT(t,h)])/h)
+}
+
+function coefs(s,a,b,c,d,eps,disc,ic){
+	let num = 0;
+	let denom = 0;
+	let scope = {
+		s:s,
+		a:a,
+		b:b,
+		c:c,
+		d:d,
+		eps:eps,
+		disc:disc,
+		ic:ic
+	}
+	if(s !== 0){
+		num = evaluate('c+s*disc+(d/s-b)*ic*(1-exp(-eps*s))-d*ic*eps',scope)
+	} else{
+		num = c
+	}
+	denom = evaluate('2*s+a+b*exp(-eps*s)-b*s*eps*exp(-eps*s)+d*eps*exp(-eps*s)',scope)
+	return(divide(num,denom))
+}
+
+function polyFrisch(x,a,b,d,eps=6,deriv=0){
+	let scope = {
+		x:x,
+		a:a,
+		b:b,
+		d:d,
+		eps:eps
+	}
+	if(deriv === 0){
+		return(evaluate('x^2+a*x+b*x*exp(-eps*x)+d-d*exp(-eps*x)',scope))
+	} else if(deriv === 1){
+		return(evaluate('2*x+a+b*exp(-eps*x)-eps*b*x*exp(-eps*x)+eps*d*exp(-eps*x)',scope))
+	}
+}
+
+function newton(x,a,b,d,eps=6){
+	return(subtract(x,divide(polyFrisch(x,a,b,d,eps),polyFrisch(x,a,b,d,eps,1))))
+}
+
+function initPoint(z, k){
+	const I = complex({re: 0, im: 1})
+	const tPiKI = complex({re: 0, im: 2*pi*k})
+	let tmp = add(log(z), tPiKI)
+	let ip = subtract(tmp, log(tmp))
+	const p = sqrt(2*(multiply(exp(1),z)+1))
+	if(abs(add(z, exp(-1))) <= 1){
+		if(k === 0){
+			ip = add(subtract(add(-1, p), multiply(1/3, pow(p,2))), multiply(11/72, pow(p,3)))
+		}
+		if(k === 1 && z.im < 0){
+			ip = subtract(subtract(subtract(-1, p), multiply(1/3, pow(p,2))), multiply(11/72, pow(p,3)))
+		}
+		if(k === -1 && z.im > 0){
+			ip = subtract(subtract(subtract(-1, p), multiply(1/3, pow(p,2))), multiply(11/72, pow(p,3)))
+		}
+	}
+  
+	if(k === 0 && abs(subtract(z, 0.5)) <= 0.5){
+		ip = divide(multiply(0.35173371, (add(0.1237166, multiply(7.061302897, z)))), add(2, multiply(0.827184, add(1, multiply(2,z)))))// (1,1) Padé approximant for W(0,a)
+	}
+	if (k === -1 && abs(subtract(z, 0.5)) <= 0.5){
+		ip = -(divide(multiply(add(2.2591588985, multiply(4.22096,I)), subtract(multiply(subtract(-14.073271, multiply(33.767687754,I)), z), multiply(subtract(12.7127, multiply(19.071643,I)), add(1, multiply(2,z))))), subtract(2, multiply(subtract(17.23103, multiply(10.629721,I)), add(1, multiply(2,z))))))
+	}// (1,1) Padé approximant for W(-1,a)
+  
+  return(ip)
+}
+
+function lambertW(z, k = 0){
+  // Some values of z and k yield known results
+  if(z === 0){
+  	if(k === 0){
+  		return(0)
+  	} else{
+  		return(-Infinity)
+  	}
+  }
+  if(z === -exp(-1) && (k === 0 || k === -1)){
+  	return(-1)
+  }
+  if(z === exp(1) && k === 0){
+  	return(1)
+  }
+
+  z = complex({re: z, im: 0})
+  
+  // Halley's method
+  var w = initPoint(z, k)
+  // console.log(w)
+  const maxiter = 30 // Apparently there is a small chance of infinite loops
+  const prec = 10e-30 // Threshold of precision
+
+  for(let i=0; i<=maxiter; i++){
+    let wprev = w
+    w = subtract(w,divide(subtract(multiply(w,exp(w)),z),subtract(multiply(exp(w),add(w,1)), divide(multiply(add(w,2),subtract(multiply(w,exp(w)),z)),add(multiply(2,w),2)))))
+    if(abs(subtract(w,wprev)) < prec){
+    	break
+    }
+  }
+  return(w)
 }
 
 class App extends React.Component {
@@ -43,7 +148,8 @@ class App extends React.Component {
 				"mu": 10,
 				"shock": 1.452,
 				"h": 1/6,
-				"c": 0.165
+				"c": 0.165,
+				"ncomps": 4
 	    	},
 	    	data: [
 	    		{
@@ -114,23 +220,128 @@ class App extends React.Component {
 				    },
 					autorange: true
 				}
-			}
+			},
+			eq: 1.32
 	    };
 
 	    this.handleChange = this.handleChange.bind(this);
+	    this.handleComps = this.handleComps.bind(this);
 	    this.computeEquilibrium = this.computeEquilibrium.bind(this);
+	    this.addComp = this.addComp.bind(this);
 	}
 
 	componentDidMount() {
+		let partialState = Object.assign({}, this.state);
+		for(let i = 1; i <= this.state.params.ncomps; i++){
+			this.addComp(partialState,i)
+		}
+        const newLayout = Object.assign({}, this.state.layout);
+        newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
+
+		this.setState({
+			data: partialState.data,
+			layout: newLayout
+		})
+
 		this.computeEquilibrium(this.state.params);
+	}
+
+	addComp(partialState, ncomp) {
+		let params = this.state.params;
+		let a = params.lam*params.r+params.lam*params.s*params.mu/params.eps;
+		let b = -params.lam*params.s*params.mu/params.eps;
+		let d = params.lam*params.s*params.m/params.eps;
+
+		let rho = subtract(divide(lambertW(-b*exp(a*params.eps)*params.eps, ncomp-1),params.eps),a);
+
+		for(let i=1; i<=100; i++){
+	      	let xp = newton(rho,a,b,d,params.eps);
+	      	if(abs(subtract(rho, xp)) < 1e-10) break
+	      	else rho = xp;
+	    }
+	    if(round(rho,5) === 0){
+	      rho = -1
+	      for(let i=1; i<=100; i++){
+	        let xp = newton(rho,a,b,d,params.eps)
+	        if(abs(subtract(rho, xp)) < 1e-10) break
+	        else rho = xp
+	      }
+	    }
+
+		const eq = params.c/(params.lam*(params.r+params.s*params.m));
+		let disc = params.shock;
+		let init_vals = eq;
+		let ks = coefs(rho,a,b,params.c,d,params.eps,disc,init_vals);
+
+		let pks = multiply(2,ks).toPolar();
+
+		var times = [];
+		var comp = [];
+		for(let i = 0; i<params.eps;i+=params.h){
+			comp.push(eq)
+		}
+		var name = ""
+		if(rho.im < 1e-6){
+			name = "Trend"
+			for(let t = 0; t<(params.tfinal-params.eps); t += params.h){
+				times.push(round(t,4));
+				comp.push(init_vals+ks.re*exp(t*rho.re));
+			}
+		} else{
+			name = "Cycle " + (ncomp - 1)
+			for(let t = 0; t<(params.tfinal-params.eps); t += params.h){
+				times.push(round(t,4));
+				comp.push(init_vals+pks.r*exp(t*rho.re)*cos(t*rho.im + pks.phi))
+			}
+		}
+		for(let t = (params.tfinal-params.eps); t<params.tfinal; t+=params.h){
+			times.push(t)
+		}
+
+		var new_comp = {
+	    			x: times,
+		            y: comp,
+		            type: 'scatter',
+		            mode: 'lines',
+		            name: name,
+		            hovertemplate: 
+		            	't: %{x:.0f}' +
+                        '<br>x: %{y:.2f}' +
+                        '<extra></extra>'
+		        }
+
+		partialState.data.push(new_comp);
 	}
 
 	handleChange(event) {
 		let partialState = Object.assign({}, this.state);
 		partialState.params[event.target.name] = parseFloat(event.target.value);
+		if(event.target.name === 'eps') partialState.params.h = 1/event.target.value
 		this.setState(partialState, function() {
 			this.computeEquilibrium();
 		});
+	}
+
+	handleComps(event) {
+		let partialState = Object.assign({}, this.state);
+		let ncomps = event.target.value;
+
+		if(ncomps < this.state.params.ncomps){
+			partialState.data.pop();
+		} else if(ncomps > this.state.params.ncomps){
+			this.addComp(partialState,ncomps);
+		}
+
+		partialState.params.ncomps = ncomps;
+
+        const newLayout = Object.assign({}, this.state.layout);
+        newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
+
+		this.setState({
+			params: partialState.params,
+			data: partialState.data,
+			layout: newLayout
+		})
 	}
 
 	computeEquilibrium() {
@@ -141,7 +352,7 @@ class App extends React.Component {
 		var times = [];
 		var conso = [];
 		for(let t = 0; t<params.eps; t += params.h){
-			times.push(Math.round(t*1000)/1000);
+			times.push(round(t,4));
 			conso.push(eq);
 		}
 		conso.push(params.shock)
@@ -149,7 +360,7 @@ class App extends React.Component {
 		let denom = 1+params.lam*params.s*params.h*params.mu/(2*params.eps);
 		let sumy = 0;
         for(var t = params.eps; t < params.tfinal; t += params.h){
-			times.push(Math.round(t*1000)/1000);
+			times.push(round(t,4));
 			sumy = 0;
 			for(var i = params.h; i <= (params.eps); i+=params.h){
 				sumy += yt(params.m,params.mu,conso,t-i,params.h);
@@ -164,13 +375,23 @@ class App extends React.Component {
         partialState.data[1].x = [0,params.tfinal]
         partialState.data[1].y = [eq,eq]
 
+        if(params.ncomps > 0){
+        	for(let i = 1; i <= this.state.params.ncomps; i++){
+        		partialState.data.pop();
+        	}
+			for(let i = 1; i <= this.state.params.ncomps; i++){
+				this.addComp(partialState,i);
+			}
+        }
+
         // See https://github.com/plotly/react-plotly.js#refreshing-the-plot and the discussion here https://github.com/plotly/react-plotly.js/issues/59
         const newLayout = Object.assign({}, this.state.layout);
         newLayout.xaxis.range = [0,this.state.params.tfinal]
         newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
 		this.setState({
 			data: partialState.data,
-			layout: newLayout
+			layout: newLayout,
+			eq: eq
 		})
 		// console.log(this.state)
 	}
@@ -186,7 +407,7 @@ class App extends React.Component {
 								<div className="block-4">
 									<div className="entry">
 								        <label>
-								          <InlineMath math="\epsilon" />
+								          <InlineMath math="\epsilon" /> (lag)
 								          <input name="eps" value={this.state.params.eps} step={steps.eps} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
@@ -199,10 +420,10 @@ class App extends React.Component {
 								        </label>
 								    </div>
 								</div>
-								<div className="block-4">
+								<div className="block-4 collapse">
 									<div className="entry">
 								        <label>
-								         <InlineMath math="h" />
+								         <InlineMath math="h" /> (step)
 								          <input name="h" value={this.state.params.h} step={steps.h} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
@@ -260,6 +481,24 @@ class App extends React.Component {
 								    </div>
 								</div>
 							</div>
+							<div className="row">
+								<div className="block-4">
+									<div className="entry">
+								        <label>
+								          <InlineMath math="c" />
+								          <input name="c" value={this.state.params.c} step={steps.c} className="entry-form" type="number" onChange={this.handleChange} />
+								        </label>
+								    </div>
+								</div>
+								<div className="block-4">
+									<div className="entry">
+								        <label>
+								          <InlineMath math="n_{components}" />
+								          <input name="ncomps" value={this.state.params.ncomps} step={steps.ncomps} className="entry-form" type="number" onChange={this.handleComps} />
+								        </label>
+								    </div>
+								</div>
+							</div>
 					    </div>
 				    </div>
 				    <div className="block-9">
@@ -277,44 +516,6 @@ class App extends React.Component {
 		)
 	}
 }
-
-// class Diag extends React.Component {
-// 	constructor(props) {
-// 		super(props)
-// 		this.trace1 = {
-//             x: props.data.y,
-//             y: props.data.is,
-//             type: 'scatter',
-//             mode: 'lines+markers',
-//             marker: {color: 'red'},
-//           }
-//         this.trace2 = {
-//             x: props.data.y,
-//             y: props.data.lm,
-//             type: 'scatter',
-//             mode: 'lines+markers',
-//             marker: {color: 'blue'},
-//           }
-// 		this.state = {
-// 			data: [this.trace1,this.trace2], 
-// 			layout: {
-// 				autosize: true
-// 			}
-// 		}
-// 		console.log(props)
-// 	}
-
-//   render() {
-//     return (
-//       <Plot
-//         data={this.state.data}
-//         layout={this.state.layout}
-//         style={{width: "100%", height: "100%"}}
-//         useResizeHandler={true}
-//       />
-//     );
-//   }
-// }
 
 ReactDOM.render(
   <App />,

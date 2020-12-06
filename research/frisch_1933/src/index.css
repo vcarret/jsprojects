@@ -47,6 +47,12 @@ height: 500px;
 .entry {
 	padding-bottom: 5px;
 }
+.collapse{
+    display: none;
+}
+#last{
+    height: 25px;
+}
 .entry-form, button, select {
 	/*padding: 0px 0px;*/
 	height: 34px;

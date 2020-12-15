@@ -20,7 +20,7 @@ const steps = {
 	P1: 0.5
 }
 
-function demand(K, k, p, P, theta, t){
+function demand(K,k,p,P,theta,t){
     return(K + k*theta*(p[t-theta/2]-P));
 }
 

@@ -154,7 +154,7 @@ class App extends React.Component {
 	    	data: [
 	    		{
 	    			x: [],
-		            y: [],// IS 1
+		            y: [],
 		            type: 'scatter',
 		            mode: 'lines',
 		            name: "Consumption, x",
@@ -162,7 +162,7 @@ class App extends React.Component {
 		            	color: "black"
 		            },
 		            hovertemplate: 
-		            	't: %{x:.0f}' +
+		            	't: %{x:.2f}' +
                         '<br>x: %{y:.2f}' +
                         '<extra></extra>'
 		        },
@@ -176,7 +176,18 @@ class App extends React.Component {
 		        	},
 		        	showlegend: false,
 		            hovertemplate: 
-		            	't: %{x:.0f}' +
+		            	't: %{x:.2f}' +
+                        '<br>x: %{y:.2f}' +
+                        '<extra></extra>'
+		        },
+		        {
+		        	x: [],
+		        	y: [],
+		            type: 'scatter',
+		        	mode: 'lines',
+		        	name: 'Components sum',
+		            hovertemplate: 
+		            	't: %{x:.2f}' +
                         '<br>x: %{y:.2f}' +
                         '<extra></extra>'
 		        }
@@ -221,20 +232,65 @@ class App extends React.Component {
 					autorange: true
 				}
 			},
-			eq: 1.32
+			eq: 1.32,
+			showCompSum: false
 	    };
 
 	    this.handleChange = this.handleChange.bind(this);
 	    this.handleComps = this.handleComps.bind(this);
+	    this.handleCompSum = this.handleCompSum.bind(this);
 	    this.computeEquilibrium = this.computeEquilibrium.bind(this);
 	    this.addComp = this.addComp.bind(this);
+	    this.showCompSum = this.showCompSum.bind(this)
+	}
+
+	handleCompSum(event){
+		let partialState = Object.assign({}, this.state);
+        const newLayout = Object.assign({}, this.state.layout);
+        newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
+
+		if(this.state.showCompSum){
+			partialState.data[2].x = [];
+			partialState.data[2].y = [];
+		} else{
+			this.showCompSum(partialState);
+		}
+
+		this.setState({
+			data: partialState.data,
+			showCompSum: !this.state.showCompSum,
+			layout: newLayout
+		})
+	}
+
+	showCompSum(partialState) {
+		let params = this.state.params;
+
+		if(params.ncomps > 0){
+			const eq = params.c/(params.lam*(params.r+params.s*params.m));
+			var times = [];
+			var compSum = [];
+			for(let t = 0; t<params.tfinal; t += params.h){
+				times.push(t);
+				let sum = 0;
+				for(let i = 3; i <= partialState.data.length-1; i++){
+					sum += partialState.data[i].y[iFT(t,params.h)]-eq;
+				}
+				compSum.push(sum+eq);
+			}			
+		}
+
+		partialState.data[2].x = times;
+		partialState.data[2].y = compSum;
 	}
 
 	componentDidMount() {
 		let partialState = Object.assign({}, this.state);
+
 		for(let i = 1; i <= this.state.params.ncomps; i++){
 			this.addComp(partialState,i)
 		}
+
         const newLayout = Object.assign({}, this.state.layout);
         newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
 
@@ -277,7 +333,7 @@ class App extends React.Component {
 
 		var times = [];
 		var comp = [];
-		for(let i = 0; i<params.eps;i+=params.h){
+		for(let i = 0; i<params.eps; i+=params.h){
 			comp.push(eq)
 		}
 		var name = ""
@@ -291,7 +347,7 @@ class App extends React.Component {
 			name = "Cycle " + (ncomp - 1)
 			for(let t = 0; t<(params.tfinal-params.eps); t += params.h){
 				times.push(round(t,4));
-				comp.push(init_vals+pks.r*exp(t*rho.re)*cos(t*rho.im + pks.phi))
+				comp.push(init_vals+pks.r*exp(t*rho.re)*cos(t*rho.im + pks.phi));
 			}
 		}
 		for(let t = (params.tfinal-params.eps); t<params.tfinal; t+=params.h){
@@ -305,12 +361,16 @@ class App extends React.Component {
 		            mode: 'lines',
 		            name: name,
 		            hovertemplate: 
-		            	't: %{x:.0f}' +
+		            	't: %{x:.2f}' +
                         '<br>x: %{y:.2f}' +
                         '<extra></extra>'
 		        }
 
 		partialState.data.push(new_comp);
+
+		if(this.state.showCompSum){
+			this.showCompSum(partialState);
+		}
 	}
 
 	handleChange(event) {
@@ -328,6 +388,9 @@ class App extends React.Component {
 
 		if(ncomps < this.state.params.ncomps){
 			partialState.data.pop();
+			if(this.state.showCompSum){
+				this.showCompSum(partialState);
+			}
 		} else if(ncomps > this.state.params.ncomps){
 			this.addComp(partialState,ncomps);
 		}
@@ -376,13 +439,17 @@ class App extends React.Component {
         partialState.data[1].y = [eq,eq]
 
         if(params.ncomps > 0){
-        	for(let i = 1; i <= this.state.params.ncomps; i++){
+        	for(let i = 1; i <= params.ncomps; i++){
         		partialState.data.pop();
         	}
-			for(let i = 1; i <= this.state.params.ncomps; i++){
+			for(let i = 1; i <= params.ncomps; i++){
 				this.addComp(partialState,i);
 			}
         }
+
+        if(this.state.showCompSum){
+			this.showCompSum(partialState);
+		}
 
         // See https://github.com/plotly/react-plotly.js#refreshing-the-plot and the discussion here https://github.com/plotly/react-plotly.js/issues/59
         const newLayout = Object.assign({}, this.state.layout);
@@ -391,7 +458,7 @@ class App extends React.Component {
 		this.setState({
 			data: partialState.data,
 			layout: newLayout,
-			eq: eq
+			eq: eq,
 		})
 		// console.log(this.state)
 	}
@@ -399,7 +466,7 @@ class App extends React.Component {
 	render() {
 		return (
       		<div id = "page-wrapper">
-				<h1>Frisch's rocking horse model</h1>
+				<h1>Ragnar Frisch's rocking horse model</h1>
 				<div className="row">
 				    <div className="block-3">
 				    	<div id="settings">
@@ -499,6 +566,16 @@ class App extends React.Component {
 								    </div>
 								</div>
 							</div>
+							<div id="last" className="row">
+								<div className="block-11">
+									<div className="entry">
+								        <label>
+								          Show the sum of components:
+								          <input name="showCompSum" type="checkbox" checked={this.state.showCompSum} onChange={this.handleCompSum}/>
+								        </label>
+								    </div>
+								</div>
+							</div>
 					    </div>
 				    </div>
 				    <div className="block-9">
@@ -519,5 +596,5 @@ class App extends React.Component {
 
 ReactDOM.render(
   <App />,
-  document.getElementById('root-islm')
+  document.getElementById('root-frisch-1933')
 );

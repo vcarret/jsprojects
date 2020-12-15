@@ -1,8 +1,8 @@
 {
-  "name": "islm-ad",
+  "name": "is-kc",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://hetmodels.com/assets/islm-ad/",
+  "homepage": "https://hetmodels.com/assets/is-kc/",
   "dependencies": {
     "@testing-library/jest-dom": "^5.11.6",
     "@testing-library/react": "^11.2.2",

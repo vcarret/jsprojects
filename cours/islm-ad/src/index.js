@@ -464,7 +464,7 @@ class App extends React.Component {
 				}
 			    tmp = []
 			    prices.push(j)
-			    for(let i = 0 ; i < params.ymaxaxis ; i += 1){
+			    for(let i = 0 ; i < params.ymaxaxis ; i += 10){
 			    	if(j === 0){
 			    		income.push(i)
 			    	}

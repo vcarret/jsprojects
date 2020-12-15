@@ -684,5 +684,5 @@ class App extends React.Component {
 
 ReactDOM.render(
   <App />,
-  document.getElementById('root-islm-ad')
+  document.getElementById('root-is-kc')
 );

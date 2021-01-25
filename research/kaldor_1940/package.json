@@ -9,6 +9,7 @@
     "@testing-library/user-event": "^12.2.2",
     "odex": "^2.0.4",
     "plotly.js-cartesian-dist": "^1.58.4",
+    "plotly.js-gl3d-dist": "^1.58.4",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-scripts": "4.0.1",

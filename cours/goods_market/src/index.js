@@ -629,12 +629,12 @@ class App extends React.Component {
 								    </div>
 								</div>
 							</div>
-							<h4><u>Shocks</u></h4>
+							<h4><u>Shock</u></h4>
 							<div className="row">
 								<div className="block-6">
 									<div className="entry">
 								        <label>
-									        Var. 1:
+									        Variable:
 									        <select className="shocked_var" name="shocked_var_1" value={this.state.shocks.shocked_var_1} onChange={this.handleShock}>
 									        	<option value=""></option>
 												<option value="alpha">alpha</option>

@@ -5,19 +5,30 @@ import Plotly from 'plotly.js-cartesian-dist';// see https://github.com/plotly/p
 import createPlotlyComponent from "react-plotly.js/factory";
 import {InlineMath} from 'react-katex';
 
+var odex = require('odex');
+var s = new odex.Solver(2);
+
+var KaldorCS = function(Iy,Ik,bari,alpha) {
+  return function(x, y) {
+    return [
+      alpha*(-0.00000000153*y[0]**3+0.00004744*y[0]**2+(Iy-0.4719)*y[0]-Ik*y[1]+(bari+748.1)),
+      Iy * y[0] - Ik*y[1] + bari
+    ];
+  };
+};
+
 const Plot = createPlotlyComponent(Plotly);
 
 const steps = {
 	maxgdp: 100,
 	maxcap: 100,
-	tfinal: 10,
+	tfinal: 5,
 	alpha: 0.5,
 	Iy: 0.01,
 	Ik: 0.01,
 	bari: 25,
 	Y0: 100,
-	K0: 500,
-	bark: 500
+	K0: 500
 }
 
 function Inv(Y,K,Iy,Ik,bari){
@@ -28,8 +39,8 @@ function Sav(Y){
   	return(0.00000000153*Y**3-0.00004744*Y**2+0.4719*Y-748.1)
 }
 
-function locus_ydot(Y,K,alpha,Iy,Ik,bari){
-  	return(alpha*(-0.00000000153*Y**3+0.00004744*Y**2+(Iy-0.4719)*Y-Ik*K+(bari+748.1)))
+function locus_ydot(Y,Iy,Ik,bari){
+  	return(1/Ik*(-0.00000000153*Y**3+0.00004744*Y**2+(Iy-0.4719)*Y+(bari+748.1)))
 }
 
 const btn_choices = ["is","phase","traj"]
@@ -39,7 +50,7 @@ class App extends React.Component {
 		super(props);
 	    this.state = {
 		    params: {
-		    	maxgdp: 25000,
+		    	maxgdp: 30000,
 		    	maxcap: 70000,
 			    tfinal: 30,
 				alpha: 1,
@@ -47,8 +58,7 @@ class App extends React.Component {
 				Ik: -0.02,
 				bari: -125,
 				Y0: 20000,
-				K0: 70000,
-				bark: 50000
+				K0: 70000
 	    	},
 	    	graph_sel: {
 	    		value: "is",
@@ -91,28 +101,41 @@ class App extends React.Component {
 	    	data_phase: [
 				{
 					x: [],
-					y: [],
-					z: [],
-					type: 'contour',
-					contours:{
-						type: 'constraint',
-						operation: "=",
-						value: 0
-					},
-					name: "Income locus",
+					y: [], // y-y
+					type: 'scatter',
+					mode: 'lines',
+		            line: {
+		            	color: "blue"
+		            },					
+					name: "Constant income locus",
 					hovertemplate: 
 		            	'Y: %{x:.0f}' +
-                        '<br>K: %{y:.2f}' +
+                        '<br>K: %{y:.0f}' +
                         '<extra></extra>'
 				},
 		        {
 	    			x: [],
-		            y: [],// K
+		            y: [],// k-k
 		            type: 'scatter',
 		            mode: 'lines',
-		            name: 'Capital locus',
+		            name: 'Constant capital locus',
 		            line: {
 		            	color: "green"
+		            },
+		            showlegend: false,
+		            hovertemplate: 
+		            	'Y: %{x:.0f}' +
+                        '<br>K: %{y:.0f}' +
+                        '<extra></extra>'
+		        },
+		        {
+	    			x: [],
+		            y: [],// trajectory
+		            type: 'scatter',
+		            mode: 'lines',
+		            name: 'Trajectory',
+		            line: {
+		            	color: "black"
 		            },
 		            showlegend: false,
 		            hovertemplate: 
@@ -127,14 +150,14 @@ class App extends React.Component {
 		            y: [],// I
 		            type: 'scatter',
 		            mode: 'lines',
-		            name: "Prices",
+		            name: "Income",
 		            line: {
 		            	color: "black"
 		            },
 		            showlegend: false,
 		            hovertemplate: 
-		            	'gdp: %{x:.0f}' +
-                        '<br>I: %{y:.0f}' +
+		            	't: %{x:.0f}' +
+                        '<br>Y: %{y:.0f}' +
                         '<extra></extra>'
 		        },
 		        {
@@ -142,14 +165,14 @@ class App extends React.Component {
 		            y: [],// S
 		            type: 'scatter',
 		            mode: 'lines',
-		            name: "Prices",
+		            name: 'Capital',
 		            line: {
 		            	color: "red"
 		            },
 		            showlegend: false,
 		            hovertemplate: 
-		            	'gdp: %{x:.0f}' +
-                        '<br>S: %{y:.0f}' +
+		            	't: %{x:.0f}' +
+                        '<br>K: %{y:.0f}' +
                         '<extra></extra>'
 		        }
 		    ],
@@ -183,43 +206,75 @@ class App extends React.Component {
 				      	size: 18,
 				      	color: '#333'
 				    },
-				    autorange: true,
-					// range: []
+				autorange: true,
+				// range: []
 				}
 			},
 			layout_phase: {
-					autosize: true,
-					showlegend: false,
-					hovermode: 'closest',
-					margin: {
-						l: 50,
-						r: 50,
-						b: 50,
-						t: 50,
-						pad: 4
-					},
-					paper_bgcolor: '#cecece',
-	  		// 		plot_bgcolor: '#cccccc',
-					yaxis: {
-						autorange: true,
-						title: "Capital stock, K",
-						titlefont: {
-					      	family: 'Arial, sans-serif',
-					      	size: 18,
-					      	color: '#333'
-					    },
-						range: []
-					},
-					xaxis: {
-						title: 'Income, Y',
-						titlefont: {
-					      	family: 'Arial, sans-serif',
-					      	size: 18,
-					      	color: '#333'
-					    },
-						autorange: true
-					}
+				autosize: true,
+				showlegend: false,
+				hovermode: 'closest',
+				margin: {
+					l: 50,
+					r: 50,
+					b: 50,
+					t: 50,
+					pad: 4
+				},
+				paper_bgcolor: '#cecece',
+  		// 		plot_bgcolor: '#cccccc',
+				yaxis: {
+					autorange: true,
+					title: "Capital stock, K",
+					titlefont: {
+				      	family: 'Arial, sans-serif',
+				      	size: 18,
+				      	color: '#333'
+				    },
+					range: []
+				},
+				xaxis: {
+					title: 'Income, Y',
+					titlefont: {
+				      	family: 'Arial, sans-serif',
+				      	size: 18,
+				      	color: '#333'
+				    },
+					autorange: true
 				}
+			},
+			layout_traj: {
+				autosize: true,
+				showlegend: false,
+				hovermode: 'closest',
+				margin: {
+					l: 50,
+					r: 50,
+					b: 50,
+					t: 50,
+					pad: 4
+				},
+				paper_bgcolor: '#cecece',
+  		// 		plot_bgcolor: '#cccccc',
+				yaxis: {
+					title: '',
+					titlefont: {
+				      	family: 'Arial, sans-serif',
+				      	size: 18,
+				      	color: '#333'
+				    },
+					autorange: true
+				},
+				xaxis: {
+					title: 'Time, t',
+					titlefont: {
+				      	family: 'Arial, sans-serif',
+				      	size: 18,
+				      	color: '#333'
+				    },
+					autorange: true
+				}
+			}
 	    };
 
 	    this.handleChange = this.handleChange.bind(this);
@@ -257,14 +312,31 @@ class App extends React.Component {
 
 	computeEquilibrium() {
 		var params = this.state.params;
-		console.log(this.state.graph_sel)
+
+		let income = [];
+		let capital = [];
+		let time = [];
+
+		s.denseOutput = true;  // request interpolation closure in solution callback
+
+		s.solve(KaldorCS(params.Iy,params.Ik,params.bari,params.alpha),
+			0,    // initial x value
+			[params.Y0,params.K0],  // initial y values (just one in this example)
+			params.tfinal, // final x value
+			s.grid(1, function(x,y) {
+				// console.log(x,y)
+					time.push(x);
+					income.push(y[0]);
+					capital.push(y[1]);
+			}));  
+
 		if(this.state.graph_sel.value === 'is'){
 			let gdp = [];
 			let inv = [];
 			let sav = [];
 			for(let i = 0; i <= params.maxgdp; i += 50){
 				gdp.push(i);
-				inv.push(Inv(i,params.bark,params.Iy,params.Ik,params.bari));
+				inv.push(Inv(i,params.K0,params.Iy,params.Ik,params.bari));
 				sav.push(Sav(i));
 			}
 
@@ -272,8 +344,8 @@ class App extends React.Component {
 			partialState.data_is[0].x = gdp;
 			partialState.data_is[0].y = inv;
 
-	        partialState.data_is[1].x = gdp
-	        partialState.data_is[1].y = sav
+	        partialState.data_is[1].x = gdp;
+	        partialState.data_is[1].y = sav;
 
 	        // See https://github.com/plotly/react-plotly.js#refreshing-the-plot and the discussion here https://github.com/plotly/react-plotly.js/issues/59
 	        const newLayout = Object.assign({}, this.state.layout_is);
@@ -285,35 +357,26 @@ class App extends React.Component {
 			})
 			// console.log(this.state)			
 		} else if(this.state.graph_sel.value === 'phase'){
-			let grid = [];
-			let tmp = [];
-			let cont = 0;
 			let gdp = [];
 			let cap_locus = [];
-			let capital = [];
+			let inc_locus = [];
 			let step = 100
-			for(let j = 0 ; j < params.maxcap ; j += step){
-			    capital.push(j)
-			    tmp = []
-			    for(let i = 0 ; i < params.maxgdp ; i += step){
-			    	if(j === 0){
-			    		gdp.push(i)
-			    		cap_locus.push(-params.Iy/params.Ik*i+params.bari)
-			    	}
-			    	cont = locus_ydot(i,j,params.alpha,params.Iy,params.Ik,params.bari)
-			        tmp.push(cont)
-			    }
-			    grid.push(tmp)
+			for(let i = 0 ; i < params.maxgdp ; i += step){
+			    gdp.push(i)
+			    cap_locus.push(-params.Iy/params.Ik*i-params.bari/params.Ik)
+			    inc_locus.push(locus_ydot(i,params.Iy,params.Ik,params.bari))
 			}
 
 			let partialState = Object.assign({}, this.state);
 			// if(draw === "normal"){
-				partialState.data_phase[0].x = gdp;
-				partialState.data_phase[0].y = capital;
-				partialState.data_phase[0].z = grid;
+			partialState.data_phase[0].x = gdp;
+			partialState.data_phase[0].y = inc_locus;
 	        
 	        partialState.data_phase[1].x = gdp;
 	        partialState.data_phase[1].y = cap_locus;
+
+	        partialState.data_phase[2].x = income;
+	        partialState.data_phase[2].y = capital;
 			// } 
 			// else if(draw.includes("shock")){
 			// 	let n_shock = parseFloat(draw.charAt(draw.length-2))
@@ -329,6 +392,21 @@ class App extends React.Component {
 			this.setState({
 				data_phase: partialState.data_phase,
 				layout_phase: newLayout
+			})
+		} else if(this.state.graph_sel.value === 'traj'){
+			let partialState = Object.assign({}, this.state);
+			partialState.data_traj[0].x = time;
+			partialState.data_traj[0].y = income;
+
+			partialState.data_traj[1].x = time;
+			partialState.data_traj[1].y = capital;
+
+	        // See https://github.com/plotly/react-plotly.js#refreshing-the-plot and the discussion here https://github.com/plotly/react-plotly.js/issues/59
+	        const newLayout = Object.assign({}, this.state.layout_traj);
+	        newLayout.datarevision = (partialState.layout_traj.datarevision + 1) % 10;
+			this.setState({
+				data_traj: partialState.data_traj,
+				layout_traj: newLayout
 			})
 		}
 	}
@@ -419,16 +497,6 @@ class App extends React.Component {
 								        <label>
 								          <InlineMath math="K(0)" />
 								          <input name="K0" value={this.state.params.K0} step={steps.K0} className="entry-form" type="number" onChange={this.handleChange} />
-								        </label>
-								    </div>
-								</div>
-							</div>
-							<div className="row">
-								<div className="block-4">
-									<div className="entry">
-								        <label>
-								          <InlineMath math="\bar{K}" />
-								          <input name="bark" value={this.state.params.bark} step={steps.bark} className="entry-form" type="number" onChange={this.handleChange} />
 								        </label>
 								    </div>
 								</div>

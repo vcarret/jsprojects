@@ -425,7 +425,7 @@ class App extends React.Component {
         for(var t = params.eps; t < params.tfinal; t += params.h){
 			times.push(round(t,4));
 			sumy = 0;
-			for(var i = params.h; i <= (params.eps); i+=params.h){
+			for(var i = params.h; i < (params.eps); i+=params.h){
 				sumy += yt(params.m,params.mu,conso,t-i,params.h);
 			}
 			conso.push((params.h*params.c+(1-params.lam*params.h*params.r-(params.h*params.lam*params.s*(params.h*params.m-params.mu))/(2*params.eps))*conso[iFT(t,params.h)]-params.lam*params.s*params.h**2/params.eps*(yt(params.m,params.mu,conso,t-params.eps,params.h)/2+sumy))/denom)

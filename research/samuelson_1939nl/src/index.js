@@ -89,7 +89,6 @@ class App extends React.Component {
 		            line: {
 		            	color: "black"
 		            },
-		            showlegend: false,
 		            hovertemplate: 
 		            	'Y: %{x:.2f}' +
                         '<br>C: %{y:.2f}' +
@@ -99,12 +98,25 @@ class App extends React.Component {
 	    			x: [],// Income
 		            y: [],// Global Demand
 		            mode: 'lines',
-		            name: "Aggregate Demand",
+		            name: "Consumption Schedule + g",
 		            line: {
 		            	dash: 'dot',
 		            	color: "black"
 		            },
-		            showlegend: false,
+		            hovertemplate: 
+		            	'Y: %{x:.2f}' +
+                        '<br>C: %{y:.2f}' +
+                        '<extra></extra>'
+		        },
+	    		{
+	    			x: [],// Income
+		            y: [],// Consumption
+		            type: 'scatter',
+		            mode: 'lines',
+		            name: "Trajectory of C + g",
+		            line: {
+		            	color: "red"
+		            },
 		            hovertemplate: 
 		            	'Y: %{x:.2f}' +
                         '<br>C: %{y:.2f}' +
@@ -117,24 +129,9 @@ class App extends React.Component {
 		            mode: 'lines',
 		            name: "45° line",
 		            line: {
-		            	color: "black"
+		            	color: "blue"
 		            },
-		            showlegend: false,
-		            hovertemplate: 
-		            	'Y: %{x:.2f}' +
-                        '<br>C: %{y:.2f}' +
-                        '<extra></extra>'
-		        },
-	    		{
-	    			x: [],// Income
-		            y: [],// Consumption
-		            type: 'scatter',
-		            mode: 'lines',
-		            name: "Real trajectory",
-		            line: {
-		            	color: "red"
-		            },
-		            showlegend: false,
+		            showlegend: true,
 		            hovertemplate: 
 		            	'Y: %{x:.2f}' +
                         '<br>C: %{y:.2f}' +
@@ -181,6 +178,11 @@ class App extends React.Component {
 		    cons_layout: {
 				autosize: true,
 				showlegend: true,
+				legend: {
+					x: 1,
+					xanchor: 'right',
+					y: 1
+				},
 				hovermode: 'closest',
 				margin: {
 					l: 50,
@@ -200,7 +202,7 @@ class App extends React.Component {
 				    autorange: true
 				},
 				xaxis: {
-					title: 'Income, Y',
+					title: 'Past income, Y(t-1)',
 					titlefont: {
 				      	family: 'Arial, sans-serif',
 				      	size: 18,
@@ -317,11 +319,11 @@ class App extends React.Component {
 			partialState.cons_data[1].x = inc_sched;
 			partialState.cons_data[1].y = aggdem_sched;
 
-			partialState.cons_data[2].x = inc_sched;
-			partialState.cons_data[2].y = inc_sched;
+			partialState.cons_data[2].x = income;
+			partialState.cons_data[2].y = cons_exp;
 
-			partialState.cons_data[3].x = income;
-			partialState.cons_data[3].y = cons_exp;
+			partialState.cons_data[3].x = inc_sched;
+			partialState.cons_data[3].y = inc_sched;
 
 	        // See https://github.com/plotly/react-plotly.js#refreshing-the-plot and the discussion here https://github.com/plotly/react-plotly.js/issues/59
 	        const cons_newLayout = Object.assign({}, this.state.cons_layout);
@@ -336,7 +338,7 @@ class App extends React.Component {
 	render() {
 		return (
       		<div id = "page-wrapper">
-				<h1>Samuelson (1939)</h1>
+				<h1>Samuelson (1939) - Nonlinear variant</h1>
 				<div className="row">
 				    <div className="block-2">
 				    	<div id="settings">
@@ -372,9 +374,9 @@ class App extends React.Component {
 							</div>
 							<div className="row">
 								<div className="block-6">
-									<div className="form-group form-inline">
+									<div className="entry">
 								        <label>
-								          Curvature of consumption
+								          <InlineMath math="c" />
 								        </label>
 								        <input name="curv" value={this.state.params.curv} step={steps.curv} className="entry-form" type="number" onChange={this.handleChange} style={{display:'inline-block'}}/>
 								    </div>
@@ -416,9 +418,19 @@ class App extends React.Component {
 							          </label>
 							        </div>
 								</div>
-							</div>
+							</div>						
 					    </div>
-				    </div>
+				    	<div id="equations">
+				    		<h4><u>Model equations</u></h4>
+							<div className="row">
+								<div className="block-12">
+								    <InlineMath math="C_t = \alpha Y_{t-1}^c" />
+								    <InlineMath math="I_t = \beta (C_t - C_{t-1})" />
+								    <InlineMath math="Y_t = C_t + I_t + g_t, Y_t > 0" />
+								</div>
+							</div>
+						</div>
+					</div>	
 				    <div className="block-10">
 				    	<div id="graph_selector" className="row">
 					    	<div className="block-2">

@@ -212,7 +212,7 @@ class App extends React.Component {
 								    </div>
 								</div>
 							</div>
-				    		<h4><u>Sensibility parameters</u></h4>
+				    		<h4><u>Sensitivity parameters</u></h4>
 							<div className="row">
 								<div className="block-6">
 									<div className="entry">

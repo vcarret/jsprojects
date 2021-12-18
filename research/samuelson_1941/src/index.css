@@ -54,7 +54,10 @@ button {
 .block-9{
 	width: 75%;
 }
-.block-2, .block-3, .block-4, .block-5, .block-6, .block-7, .block-8, .block-9{
+.block-10{
+    width: 80%;
+}
+.block-2, .block-3, .block-4, .block-5, .block-6, .block-7, .block-8, .block-9, .block-10{
 	float: left;
     position: relative;
     min-height: 1px;
@@ -85,6 +88,14 @@ border: solid 1px black;
 padding: 5px;
 padding-bottom: 0;
 margin-bottom: 0;
+/*margin-right: 5px;*/
+/*height: 100%;*/
+}
+#equations{
+background-color: #cecece;
+border: solid 1px black;
+padding: 10px;
+margin-top: 10px;
 /*margin-right: 5px;*/
 /*height: 100%;*/
 }

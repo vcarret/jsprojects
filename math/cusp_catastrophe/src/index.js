@@ -15,7 +15,8 @@ for(let i = -5; i <= 5; i+=0.1){
 	var tmp = []
 	for(let j = -5; j <= 5; j+=0.1){
 		y.push(j)
-		tmp.push((i+j)*(1-i))
+		// tmp.push((i+j)*(1-i))
+		tmp.push(j**3-j*i)
 	}
 	z.push(tmp)
 }

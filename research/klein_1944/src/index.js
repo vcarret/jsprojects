@@ -9,14 +9,16 @@ import {InlineMath} from 'react-katex';
 const Plot = createPlotlyComponent(Plotly);
 
 const steps = {
-	"sy": 0.05,
-	"sr": 0.05,
+	"sy": 0.01,
+	"sr": 0.01,
+	"sp": 0.01,
 	"sbar": 5,
-	"iy": 0.05,
-	"ir": 0.05,
+	"iy": 0.01,
+	"ir": 0.01,
 	"ibar": 5,
 	"ystar": 10,
-	"y": 10
+	"y": 10,
+	"p": 1
 }
 
 class App extends React.Component {
@@ -26,12 +28,14 @@ class App extends React.Component {
 				params: {
 					"sy": 0.2,
 					"sr": 0.75,
-					"sbar": 5,
+					"sp": 0.5,
+					"sbar": -40,
 					"iy": 0.15,
-					"ir": -1,
+					"ir": -1.6,
 					"ibar": 20,
 					"ystar": 500,
-					"y": 500
+					"y": 500,
+					"p": 100
 				},
 				data: [
 					{
@@ -258,16 +262,16 @@ class App extends React.Component {
 		var interest_rate = []
 		var is_curve = []
 
-		var r_star = 1/(params.ir-params.sr)*((params.sy-params.iy)*params.ystar+params.sbar-params.ibar)
-		var r_eq = 1/(params.ir-params.sr)*((params.sy-params.iy)*params.y+params.sbar-params.ibar)
+		var r_star = 1/(params.ir-params.sr)*((params.sy-params.iy)*params.ystar+params.sbar+params.sp*params.p-params.ibar)
+		var r_eq = 1/(params.ir-params.sr)*((params.sy-params.iy)*params.y+params.sbar+params.sp*params.p-params.ibar)
 		var inv_eq = params.ir*r_eq+params.iy*params.y+params.ibar
 		var inv_star = params.ir*r_star+params.iy*params.ystar+params.ibar
 
 		for(let r = -10; r <= 10; r+=0.01){
 			interest_rate.push(r)
 			inv.push(params.ir*r+params.iy*params.y+params.ibar)
-			sav.push(params.sr*r+params.sy*params.y+params.sbar)
-			is_curve.push(1/(params.sy-params.iy)*((params.ir-params.sr)*r+(params.ibar-params.sbar)))
+			sav.push(params.sr*r+params.sy*params.y+params.sp*params.p+params.sbar)
+			is_curve.push(1/(params.sy-params.iy)*((params.ir-params.sr)*r+(params.ibar-params.sbar-params.sp*params.p)))
 		}
 
 		let partialState = Object.assign({}, this.state);
@@ -301,8 +305,8 @@ class App extends React.Component {
 		// See https://github.com/plotly/react-plotly.js#refreshing-the-plot and the discussion here https://github.com/plotly/react-plotly.js/issues/59
 		const newLayout = Object.assign({}, this.state.layout);
 		newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
-		newLayout.xaxis.range = [0,1.2*inv_star]
-		newLayout.xaxis2.range = [0,1.1*Math.max.apply(null,is_curve)]
+		newLayout.xaxis.range = [0,1.1*Math.max.apply(null,inv)]
+		newLayout.xaxis2.range = [0,2*params.ystar]
 		newLayout["annotations"] = [
 			{
 				x: params.ystar,
@@ -341,7 +345,7 @@ class App extends React.Component {
 						<div id="settings">
 						<h4><u>Savings parameters</u></h4>
 						<div className="row">
-							<div className="block-4">
+							<div className="block-3">
 								<div className="entry">
 									<label>
 										<InlineMath math="S_y" />
@@ -349,7 +353,7 @@ class App extends React.Component {
 									</label>
 								</div>
 							</div>
-							<div className="block-4">
+							<div className="block-3">
 								<div className="entry">
 									<label>
 										<InlineMath math="S_r" />
@@ -357,7 +361,15 @@ class App extends React.Component {
 									</label>
 								</div>
 							</div>
-							<div className="block-4">
+							<div className="block-3">
+								<div className="entry">
+											<label>
+												<InlineMath math="S_p" />
+												<input name="sp" value={this.state.params.sp} step={steps.sp} className="entry-form" type="number" onChange={this.handleChange} />
+											</label>
+									</div>
+							</div>
+							<div className="block-3">
 								<div className="entry">
 											<label>
 												<InlineMath math="\bar S" />
@@ -393,7 +405,7 @@ class App extends React.Component {
 								</div>
 							</div>
 						</div>
-						<h4><u>Global parameters</u></h4>
+						<h4><u>Income and prices</u></h4>
 						<div className="row">
 							<div className="block-4">
 								<div className="entry">
@@ -411,6 +423,14 @@ class App extends React.Component {
 										</label>
 								</div>
 							</div>
+							<div className="block-4">
+								<div className="entry">
+										<label>
+											<InlineMath math="p" />
+											<input name="p" value={this.state.params.p} step={steps.p} className="entry-form" type="number" onChange={this.handleChange} />
+										</label>
+								</div>
+							</div>
 						</div>
 					</div>
 						<div id="equations">
@@ -419,7 +439,7 @@ class App extends React.Component {
 								<div className="block-12">
 								    <InlineMath math="I(r,Y)=I_r r + I_y y + \bar I" />
 
-								    <InlineMath math="S(r,Y)=S_r r + S_y y + \bar S" />
+								    <InlineMath math="S(r,Y)=S_r r + S_y y + S_p p + \bar S" />
 								</div>
 							</div>
 						</div>

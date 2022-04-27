@@ -1,8 +1,8 @@
 {
-  "name": "kaldor_1940",
+  "name": "cusp_catastrophe",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://hetmodels.com/assets/kaldor_1940",
+  "homepage": "https://hetmodels.com/assets/cusp_catastrophe",
   "dependencies": {
     "@testing-library/jest-dom": "^5.11.6",
     "@testing-library/react": "^11.2.2",
@@ -10,7 +10,7 @@
     "odex": "^2.0.4",
     "plotly.js": "^2.8.3",
     "plotly.js-cartesian-dist": "^1.58.4",
-    "plotly.js-gl3d-dist": "^1.58.4",
+    "plotly.js-gl3d-dist": "^1.58.5",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-plotly.js": "^2.5.1",

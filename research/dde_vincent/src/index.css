@@ -1,0 +1,141 @@
+html,body{
+ color: #333;
+}
+/*#page-wrapper{
+height: 500px;
+}*/
+.row {
+    margin-right: 0;
+    margin-left: 0;
+    margin-bottom: 5px;
+    height: 60px;/*faute de mieux...*/
+}
+.collapse {
+    display: none;
+}
+* {
+	box-sizing: border-box;
+}
+button {
+    width: 100%;
+}
+.sel{
+  background-color: #666;
+  color: white;
+}
+.btn:hover {
+  background-color: #aaa;
+  color: white;
+}
+#graph_selector{
+    height: 39px;
+}
+.block-2{
+    width: 20%;
+}
+.block-3{
+	width: 25%;
+}
+.block-4{
+	width: 33.3333%;
+}
+.block-5{
+    width: 40%;
+}
+.block-6{
+    width: 50%;
+}
+.block-7{
+    width: 60%;
+}
+.block-8{
+    width: 66.6666%;
+}
+.block-9{
+	width: 75%;
+}
+.block-10{
+    width: 80%;
+}
+.block-2, .block-3, .block-4, .block-5, .block-6, .block-7, .block-8, .block-9, .block-10{
+	float: left;
+    position: relative;
+    min-height: 1px;
+    padding-right: 5px;
+    padding-left: 5px;
+}
+.entry {
+	padding-bottom: 5px;
+}
+.entry-form, button, select {
+	/*padding: 0px 0px;*/
+	height: 34px;
+	max-width: 100%;
+    border-radius: 4px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    color: #555;
+}
+select, button {
+    background-color: #fff;
+}
+.shocked_var{
+    width: 100%;
+}
+#settings{
+background-color: #cecece;
+border: solid 1px black;
+padding: 5px;
+padding-bottom: 0;
+margin-bottom: 0;
+/*margin-right: 5px;*/
+/*height: 100%;*/
+}
+#equations{
+background-color: #cecece;
+border: solid 1px black;
+padding: 5px;
+padding-bottom: 0;
+margin-bottom: 0;
+margin-top: 5px;
+/*margin-right: 5px;*/
+/*height: 100%;*/
+}
+#model{
+border: solid 1px black;
+width: 100%;
+height: 600px;
+visibility: inherit;
+}
+.MathJax_Display{
+color: black;
+}
+h5{
+color: black;
+}
+.h4, .h5, .h6, h4, h5, h6 {
+    margin-top: 10px;
+    margin-bottom: 5px;
+}
+
+h1{
+    text-align: center;
+    margin-bottom: 5px;
+    margin-top: 5px;
+}
+/*#settings > .row{
+position: relative;
+left: -20px;
+}
+.row .block{
+display: inline-block;
+padding: 10px;
+}
+.row {
+	position: relative;
+  width: 100%;
+  text-align: center;
+}
+.entry{
+	width: 20%;
+}*/

@@ -8,6 +8,8 @@ import {InlineMath} from 'react-katex';
 // import * as ss from 'simple-statistics'
 import {inv,add,sqrt,mean,diag,subset,matrix,index,range,multiply,ones,transpose} from 'mathjs';
 
+const Papa = require("papaparse/papaparse.min.js");
+
 const Plot = createPlotlyComponent(Plotly);
 
 const steps = {
@@ -21,6 +23,7 @@ const gdp_points = [3178.182,3259.97075,3343.54675,3548.4085,3702.94325,3916.279
 
 const cap_points = [14239.895,14711.917,15205.273,15759.578,16361.41,17023.688,17752.528,18530.992,19263.544,20015.188,20760.19,21404.616,22058.784,22805.318,23631.742,24335.552,24870.554,25504.854,26279.792,27203.124,28174.17,28983.3,29770.398,30400.94,31125.588,32101.15,33160.38,34217.176,35245.904,36263.696,37283.484,38223.836,38987.08,39793.464,40663.208,41620.812,42632.688,43758.388,44977.192,46345.16,47827.896,49368.264,50734.812,51925.832,53184,54572.832,56084.492,57575.292,58915.288,59981.816,62435.628,63232.936,64124.208,65057.808,65974.06,66942.704,68007.352,69059.064]
 
+
 class App extends React.Component {
   constructor(props) {
     super(props);
@@ -31,6 +34,7 @@ class App extends React.Component {
           "alpha": 0.3,
           "beta": 0.3,
         },
+        database: undefined,
         data: [
           {
             x: [],
@@ -101,7 +105,9 @@ class App extends React.Component {
       };
 
       this.handleChange = this.handleChange.bind(this);
+      this.handleFile = this.handleFile.bind(this);
       this.computeRegression = this.computeRegression.bind(this);
+      this.updateData = this.updateData.bind(this);
   }
 
   componentDidMount() {
@@ -116,10 +122,50 @@ class App extends React.Component {
     });
   }
 
+  importCSV = () => {
+    var csvFilePath = require("./data.csv");
+    Papa.parse(csvFilePath, {
+      header: true,
+      download: true,
+      skipEmptyLines: true,
+      complete: this.updateData
+    });
+  };
+
+  updateData(result) {
+    var data = result.data;
+    var keys = result.meta.fields
+
+    var arr = [];
+    for(let i = 0; i < data.length; i += 1){
+      var tmp = []
+      for(let k in keys){
+        tmp.push(data[i][keys[k]])
+      }
+      arr.push(tmp)
+    }
+
+    this.setState({database: arr}, function() {
+      console.log()
+      this.computeRegression();
+    });
+  }
+
+  handleFile(event){
+    console.log(event.target)
+    this.setState({
+      csvfile: event.target.files[0]
+    })
+  }
+
   computeRegression() {
     var n = cap_points.length
     var Y = cap_points
     var tX = [Array(n).fill(1),gdp_points]
+
+    // var n = this.state.database.length
+    // var Y = subset(this.state.database, index(range(0,n),0))[0]
+    // var tX = [Array(n).fill(1),subset(this.state.database, index(range(0,n),1))[0]]
 
     var X = transpose(tX)
     var p = X[0].length
@@ -200,6 +246,20 @@ class App extends React.Component {
                     </label>
                 </div>
               </div>
+            </div>
+            <div className="row">
+              <input
+                className="csv-input"
+                type="file"
+                ref={input => {
+                  this.filesInput = input;
+                }}
+                name="file"
+                placeholder={null}
+                onChange={this.handleChange}
+              />
+              <p />
+              <button onClick={this.importCSV}> Upload datafile</button>
             </div>
           </div>
           </div>

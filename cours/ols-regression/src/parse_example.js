@@ -1,3 +1,6 @@
+// How to use Papa.parse See https://medium.com/how-to-react/how-to-parse-or-read-csv-files-in-reactjs-81e8ee4870b0
+// For the callback: https://stackoverflow.com/questions/26266459/retrieve-parsed-data-from-csv-in-javascript-object-using-papa-parse
+
 import React, { Component } from 'react';
 import {createRoot} from 'react-dom/client';
 

@@ -1,3 +1,7 @@
+// Resources:
+// Nice table and example for parsing data: https://codesandbox.io/s/how-to-parse-or-read-csv-files-in-reactjs-ssr5s2?from-embed=&file=/src/App.js
+// How to use Papa.parse See https://medium.com/how-to-react/how-to-parse-or-read-csv-files-in-reactjs-81e8ee4870b0
+// For the callback: https://stackoverflow.com/questions/26266459/retrieve-parsed-data-from-csv-in-javascript-object-using-papa-parse
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import './index.css';
@@ -27,6 +31,7 @@ const cap_points = [14239.895,14711.917,15205.273,15759.578,16361.41,17023.688,1
 class App extends React.Component {
   constructor(props) {
     super(props);
+    this.filesInput = React.createRef();
     this.state = {
         params: {
           "g": 0.02,
@@ -34,6 +39,7 @@ class App extends React.Component {
           "alpha": 0.3,
           "beta": 0.3,
         },
+        variables: "collapse",
         database: undefined,
         data: [
           {
@@ -51,8 +57,8 @@ class App extends React.Component {
               '<extra></extra>'
           },
           {
-            x: gdp_points,
-            y: cap_points,
+            x: [],
+            y: [],
             mode: 'markers',
             type: 'scatter',
             name: 'GDP ~ Cap',
@@ -83,7 +89,7 @@ class App extends React.Component {
           },
           paper_bgcolor: '#cecece',
           xaxis: {
-            title: 'GDP',
+            title: '',
             titlefont: {
                   family: 'Arial, sans-serif',
                   size: 18,
@@ -92,7 +98,7 @@ class App extends React.Component {
           range: []
           },
           yaxis: {
-            title: "Capital",
+            title: "",
             titlefont: {
                   family: 'Arial, sans-serif',
                   size: 18,
@@ -105,13 +111,13 @@ class App extends React.Component {
       };
 
       this.handleChange = this.handleChange.bind(this);
-      this.handleFile = this.handleFile.bind(this);
-      this.computeRegression = this.computeRegression.bind(this);
       this.updateData = this.updateData.bind(this);
+      this.chooseVars = this.chooseVars.bind(this);
+      this.computeRegression = this.computeRegression.bind(this);
   }
 
   componentDidMount() {
-    this.computeRegression();
+    // this.computeRegression();
   }
 
   handleChange(event) {
@@ -122,40 +128,43 @@ class App extends React.Component {
     });
   }
 
-  importCSV = () => {
-    var csvFilePath = require("./data.csv");
-    Papa.parse(csvFilePath, {
+  importCSV(event, callback){
+    Papa.parse(event.target.files[0], {
       header: true,
       download: true,
       skipEmptyLines: true,
-      complete: this.updateData
+      complete: function(results) {    
+        callback(results)
+      }
     });
   };
 
-  updateData(result) {
-    var data = result.data;
-    var keys = result.meta.fields
+  updateData(results){
+    var keys = [];
+    var data = [];
 
-    var arr = [];
-    for(let i = 0; i < data.length; i += 1){
-      var tmp = []
-      for(let k in keys){
-        tmp.push(data[i][keys[k]])
-      }
-      arr.push(tmp)
-    }
-
-    this.setState({database: arr}, function() {
-      console.log()
-      this.computeRegression();
+    // Iterating data to get column name and their values
+    results.data.map((d) => {
+      keys.push(Object.keys(d));
+      data.push(Object.values(d));
     });
+
+    keys = keys[0]
+
+    this.setState({
+      database: data,
+      keys: keys,
+      variables: ""
+    }, function() {
+      // The next step should be to display the different column names and give the possibility of choosing the role of each column (indepent / dependent variable)
+      // Eventually give more options, like the kind of fit you want, the form of the model, etc.
+      // Also display a new button to compute the regression after the choice has been made
+      this.chooseVars();
+    }); 
   }
 
-  handleFile(event){
-    console.log(event.target)
-    this.setState({
-      csvfile: event.target.files[0]
-    })
+  chooseVars() {
+    console.log(this.state.database,this.state.keys)
   }
 
   computeRegression() {
@@ -207,63 +216,26 @@ class App extends React.Component {
       <div id = "page-wrapper">
         <h1>Simple OLS Regression</h1>
         <div className="row">
-          <div className="block-2">
+          <div className="block-5">
             <div id="settings">
-            <h4><u>Technical growth and capital stock depreciation</u></h4>
-            <div className="row">
-              <div className="block-4">
-                <div className="entry">
-                  <label>
-                    <InlineMath math="g" />
-                    <input name="g" value={this.state.params.g} step={steps.g} className="entry-form" type="number" onChange={this.handleChange} />
-                  </label>
-                </div>
-              </div>
-              <div className="block-4">
-                <div className="entry">
-                  <label>
-                    <InlineMath math="\delta" />
-                    <input name="delta" value={this.state.params.delta} step={steps.delta} className="entry-form" type="number" onChange={this.handleChange} />
-                  </label>
-                </div>
+              <div className="row">
+                <input
+                  className="csv-input"
+                  type="file"
+                  ref={input => {
+                    this.filesInput = input;
+                  }}
+                  name="file"
+                  placeholder={null}
+                  onChange={(e) => this.importCSV(e,this.updateData)}
+                />
               </div>
             </div>
-            <h4><u>Production Function</u></h4>
-            <div className="row">
-              <div className="block-4">
-                <div className="entry">
-                    <label>
-                      <InlineMath math="\alpha" />
-                      <input name="alpha" value={this.state.params.alpha} step={steps.alpha} className="entry-form" type="number" onChange={this.handleChange} />
-                    </label>
-                </div>
-              </div>
-              <div className="block-4">
-                <div className="entry">
-                    <label>
-                      <InlineMath math="\beta" />
-                      <input name="beta" value={this.state.params.beta} step={steps.beta} className="entry-form" type="number" onChange={this.handleChange} />
-                    </label>
-                </div>
-              </div>
-            </div>
-            <div className="row">
-              <input
-                className="csv-input"
-                type="file"
-                ref={input => {
-                  this.filesInput = input;
-                }}
-                name="file"
-                placeholder={null}
-                onChange={this.handleChange}
-              />
-              <p />
-              <button onClick={this.importCSV}> Upload datafile</button>
+            <div id="variables" className={this.state.variables}>
+              <button id="reg_btn" className="btn" name="regress" onClick={this.computeRegression}>Regress!</button>
             </div>
           </div>
-          </div>
-          <div className="block-10">
+          <div className="block-7">
               <div id="model">
                 <Plot
                   data={this.state.data}

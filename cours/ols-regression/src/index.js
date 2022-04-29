@@ -16,6 +16,7 @@ const Papa = require("papaparse/papaparse.min.js");
 
 const Plot = createPlotlyComponent(Plotly);
 
+// https://github.com/stdlib-js/stats-base-dists-t
 const t = require( '@stdlib/stats-base-dists-t' );
 const dist = t
 

@@ -10,11 +10,14 @@ import createPlotlyComponent from "react-plotly.js/factory";
 // import 'katex/dist/katex.min.css';
 // import {InlineMath} from 'react-katex';
 // import * as ss from 'simple-statistics'
-import {inv,sqrt,reshape,concat,mean,diag,round,subset,index,range,multiply,transpose} from 'mathjs';
+import {inv,sqrt,concat,mean,diag,round,abs,subset,index,range,multiply,transpose} from 'mathjs';
 
 const Papa = require("papaparse/papaparse.min.js");
 
 const Plot = createPlotlyComponent(Plotly);
+
+const t = require( '@stdlib/stats-base-dists-t' );
+const dist = t
 
 class App extends React.Component {
   constructor(props) {
@@ -106,9 +109,7 @@ class App extends React.Component {
       this.computeRegression = this.computeRegression.bind(this);
   }
 
-  componentDidMount() {
-    this.importCSV("e",this.updateData);
-  }
+  componentDidMount() { }
 
   handleChange(event) {
     let partialState = Object.assign({}, this.state);
@@ -119,8 +120,7 @@ class App extends React.Component {
   }
 
   importCSV(event, callback){
-    var csvFilePath = require("./data.csv");
-    Papa.parse(csvFilePath, {//event.target.files[0] use this and delete previous line
+    Papa.parse(event.target.files[0], {
       header: true,
       download: true,
       skipEmptyLines: true,
@@ -139,6 +139,7 @@ class App extends React.Component {
     results.data.map((d) => {
       keys.push(Object.keys(d));
       data.push(Object.values(d));
+      return null
     });
 
     keys = keys[0]
@@ -258,7 +259,6 @@ class App extends React.Component {
     // n-p degrees of freedom
     var Vbeta_hat = multiply(ssr/(n-p), diag(Sxx))
     var std_err = sqrt(Vbeta_hat)
-    console.log(n-p)
 
     let partialState = Object.assign({}, this.state);
     // Find the right key for the cofactor selected on the plot and plot the conditional regression line
@@ -276,24 +276,35 @@ class App extends React.Component {
     // x_var.splice(col_ind,1)
     keys_cof.unshift("(Intercept)")
 
+    let sig_dig = 3
     var table_content = keys_cof.map((k,i) => {
+      let ci = dist.quantile(0.975,n-p)*std_err[i];
+      let p_value = round(2*(1-dist.cdf(abs(beta[i]/std_err[i]), n-p)),sig_dig)
+      p_value = p_value < 0.001 ? "<0.001" : p_value
+
       return (
         <tr key={i}>
           <td>
             {k}
           </td>
           <td>
-            {round(beta[i],4)}
+            {round(beta[i],sig_dig)}
           </td>
           <td>
-            {round(std_err[i],4)}
+            {round(std_err[i],sig_dig)}
+          </td>
+          <td>
+            {round(beta[i]-ci,sig_dig) + " – " + round(beta[i]+ci,sig_dig)} 
+          </td>
+          <td>
+            {p_value} 
           </td>
         </tr>
       );
     })
 
     var stats = {
-      Rsquare: round(Rsquare,4),
+      Rsquare: round(Rsquare,sig_dig),
       n: n
     }
 
@@ -374,6 +385,12 @@ class App extends React.Component {
                        <th>
                           Std Error
                        </th>
+                       <th>
+                          CI (95%)
+                        </th>
+                       <th>
+                          p-value
+                        </th>
                     </tr>
                  </thead>
                  <tbody>
@@ -384,7 +401,7 @@ class App extends React.Component {
                        <td>
                           Observations
                        </td>
-                       <td colSpan="2">
+                       <td colSpan="4">
                           {this.state.stats.n}
                        </td>
                     </tr>
@@ -392,7 +409,7 @@ class App extends React.Component {
                        <td>
                           R<sup>2</sup>
                        </td>
-                       <td colSpan="2">
+                       <td colSpan="4">
                           {this.state.stats.Rsquare}
                        </td>
                     </tr>

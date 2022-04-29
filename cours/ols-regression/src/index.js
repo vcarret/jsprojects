@@ -8,30 +8,29 @@ import './index.css';
 import Plotly from 'plotly.js-basic-dist';// see https://github.com/plotly/plotly.js/tree/master/dist#partial-bundles
 import createPlotlyComponent from "react-plotly.js/factory";
 // import 'katex/dist/katex.min.css';
-import {InlineMath} from 'react-katex';
+// import {InlineMath} from 'react-katex';
 // import * as ss from 'simple-statistics'
-import {inv,add,sqrt,mean,diag,subset,matrix,index,range,multiply,ones,transpose} from 'mathjs';
+import {inv,sqrt,reshape,mean,diag,round,subset,index,range,multiply,transpose} from 'mathjs';
 
 const Papa = require("papaparse/papaparse.min.js");
 
 const Plot = createPlotlyComponent(Plotly);
-
-const steps = {}
 
 class App extends React.Component {
   constructor(props) {
     super(props);
     this.filesInput = React.createRef();
     this.state = {
-        params: {},
+        params: {
+          ind_var: "",
+          plot_var: ""
+        },
         stats: {
           n: 0,
           Rsquare: 0
         },
-        table_content: undefined,
         variables: "collapse",
         reg_results: "collapse",
-        database: undefined,
         data: [
           {
             x: [],
@@ -43,8 +42,8 @@ class App extends React.Component {
               color: "black"
             },
             hovertemplate: 
-              'y: %{x:.0f}' +
-              '<br>u: %{y:.2f}' +
+              'x: %{x:.0f}' +
+              '<br>y: %{y:.2f}' +
               '<extra></extra>'
           },
           {
@@ -52,13 +51,13 @@ class App extends React.Component {
             y: [],
             mode: 'markers',
             type: 'scatter',
-            name: 'GDP ~ Cap',
+            name: '',
             marker: { 
               size: 12
             },
             hovertemplate: 
-              'y: %{x:.0f}' +
-              '<br>w: %{y:.2f}' +
+              'x: %{x:.0f}' +
+              '<br>y: %{y:.2f}' +
               '<extra></extra>'
           }
         ],
@@ -113,9 +112,9 @@ class App extends React.Component {
 
   handleChange(event) {
     let partialState = Object.assign({}, this.state);
-    partialState.params[event.target.name] = parseFloat(event.target.value);
+    partialState.params[event.target.name] = event.target.value;
     this.setState(partialState, function() {
-      this.computeRegression();
+      this.chooseVars()
     });
   }
 
@@ -142,14 +141,31 @@ class App extends React.Component {
     });
 
     keys = keys[0]
-    var y_var = keys[0]
-    var x_var = keys.slice(1,keys.length)
-    x_var.unshift("(Intercept)")
+
+    // Loop through the keys to add to the dropdown menu
+    var ind_var_choices = keys.map((k,i) => {
+      return (
+        <option key={i} value={k}>{k}</option>
+      )
+    })
+
+    var plot_var_choices = keys.map((k,i) => {
+      return (
+        <option key={i} value={k}>{k}</option>
+      )
+    })
+
+    // Assign the ind. var. and the plotted dep. var.
+    let params = Object.assign({}, this.state.params);
+    params["ind_var"] = keys[0];
+    params["plot_var"] = keys[1];
 
     this.setState({
+      keys: keys,
+      params: params,
       database: data,
-      y_var: y_var,
-      x_var: x_var,
+      ind_var_choices: ind_var_choices,
+      plot_var_choices: plot_var_choices,
       variables: ""
     }, function() {
       // The next step should be to display the different column names and give the possibility of choosing the role of each column (indepent / dependent variable)
@@ -163,21 +179,46 @@ class App extends React.Component {
     // Choose:
     // 1: independent variable
     // 2: dependent variable to plot
-
     // Add names of variables to plot to the graph axes and to name of datapoints
-    // const newLayout = Object.assign({}, this.state.layout);
-    // newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
-    // this.setState({
-    //   layout: newLayout
-    // })
+
+    var n = this.state.database.length
+
+    // Find the column index from the user's selection
+    let col_ind = this.state.keys.indexOf(this.state.params.ind_var)
+    var Y = subset(this.state.database, index(range(0,n),col_ind)).flat()
+    
+    let col_plot = this.state.keys.indexOf(this.state.params.plot_var)
+    var cof = subset(this.state.database, index(range(0,n),col_plot)).flat()
+
+    let partialState = Object.assign({}, this.state);
+    partialState.data[1].x = cof;
+    partialState.data[1].y = Y;
+    partialState.data[1].name = this.state.params.ind_var + "~" + this.state.params.plot_var
+
+    const newLayout = Object.assign({}, this.state.layout);
+    newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
+    newLayout.yaxis.title = this.state.params.ind_var
+    newLayout.xaxis.title = this.state.params.plot_var
+
+    this.setState({
+      data: partialState.data,
+      layout: newLayout
+    })
   }
 
   computeRegression() {
     var n = this.state.database.length
-    var p = this.state.x_var.length
-    var Y = subset(this.state.database, index(range(0,n),0)).flat()
-    var cof = subset(this.state.database, index(range(0,n),1)).flat()
-    var tX = [Array(n).fill(1),cof]
+    // Find away to avoid redundacy with chooseVars function
+    let col_ind = this.state.keys.indexOf(this.state.params.ind_var)
+    var Y = subset(this.state.database, index([...Array(n).keys()],col_ind)).flat()
+    console.log(Y)
+    var p = this.state.keys.length
+    var ind = [...Array(p).keys()]
+    ind.splice(col_ind,1)
+
+    var cof = subset(this.state.database, index([...Array(n).keys()],ind))
+    console.log(reshape(transpose(cof).flat(),[n,p-1]))
+    var tX = [Array(n).fill(1),reshape(transpose(cof).flat(),[n,p-1])]
 
     var X = transpose(tX)
 
@@ -187,53 +228,53 @@ class App extends React.Component {
     var Yhat = multiply(X,beta)
     var Ybar = mean(Y)
 
-    var ssr = Y.reduce((pV,cV) => pV + (cV - Yhat)^2)
-    var sst = Y.reduce((pV,cV) => pV + (cV - Ybar)^2)
-    var Rsquare = Math.round(1 - ssr/sst,3)
-
+    var ssr = Y.reduce((pV,cV,cI) => pV + (cV - Yhat[cI])**2,0)
+    var sst = Y.reduce((pV,cV) => pV + (cV - Ybar)**2,0)
+    var Rsquare = 1 - ssr/sst
 
     var Vbeta_hat = multiply(ssr/(n-p), diag(Sxx))
     var std_err = sqrt(Vbeta_hat)
     // console.log(std_err)
 
     let partialState = Object.assign({}, this.state);
-    partialState.data[0].x = subset(tX, index(1,range(0,n)))[0];
+    let col_plot = this.state.keys.indexOf(this.state.params.plot_var)
+    partialState.data[0].x = subset(this.state.database, index(range(0,n),col_plot)).flat()
     partialState.data[0].y = Yhat;
 
-    partialState.data[1].x = cof;
-    partialState.data[1].y = Y;
+    var x_var = JSON.parse(JSON.stringify(this.state.keys))
+    x_var.splice(col_ind,1)
+    x_var.unshift("(Intercept)")
 
-    var table_content = this.state.x_var.map((k,i) => {
+    var table_content = x_var.map((k,i) => {
       return (
         <tr key={i}>
           <td>
             {k}
           </td>
           <td>
-            {beta[i]}
+            {round(beta[i],4)}
           </td>
           <td>
-            {std_err[i]}
+            {round(std_err[i],4)}
           </td>
         </tr>
       );
     })
 
     var stats = {
-      Rsquare: Rsquare,
-      n: n,
-      beta: beta,
-      std_err: std_err
+      Rsquare: round(Rsquare,4),
+      n: n
     }
 
     // See https://github.com/plotly/react-plotly.js#refreshing-the-plot and the discussion here https://github.com/plotly/react-plotly.js/issues/59
     const newLayout = Object.assign({}, this.state.layout);
     newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
+
     this.setState({
       reg_results: "",
       table_content: table_content,
-      data: partialState.data,
       stats: stats,
+      data: partialState.data,
       layout: newLayout
     })
 
@@ -263,45 +304,67 @@ class App extends React.Component {
               </div>
             </div>
             <div id="variables" className={this.state.variables}>
-              <button id="reg_btn" className="btn" name="regress" onClick={this.computeRegression}>Regress!</button>
+              <div className="row">
+                <div className="entry">
+                  <label>
+                    Independent Variable:  
+                    <select name="ind_var" onChange={this.handleChange}>
+                      {this.state.ind_var_choices}
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div className="row">
+                <div className="entry">
+                  <label>
+                    Var. to plot against ind. var.:  
+                    <select name="plot_var" value={this.state.params.plot_var} onChange={this.handleChange}>
+                      {this.state.plot_var_choices}
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div className="row">
+                <button id="reg_btn" className="btn" name="regress" onClick={this.computeRegression}>Regress!</button>
+              </div>
             </div>
             <div id="reg_results" className={this.state.reg_results}>
-<table id="reg_table">
-  <thead>
-      <tr>
-         <th>
-            Predictors
-         </th>
-         <th>
-            Estimates
-         </th>
-         <th>
-            Std Error
-         </th>
-      </tr>
-   </thead>
-   <tbody>
-      {this.state.table_content}
-   </tbody>
-   <tfoot>
-      <tr>
-         <td>
-            Observations
-         </td>
-         <td colSpan="2">
-            {this.state.stats.n}
-         </td>
-      </tr>
-      <tr>
-         <td>
-            R<sup>2</sup>
-         </td>
-         <td colSpan="2">
-            {this.state.stats.Rsquare}
-         </td>
-      </tr>
-    </tfoot>
-</table>
+              <table id="reg_table">
+                <thead>
+                    <tr>
+                       <th>
+                          Predictors
+                       </th>
+                       <th>
+                          Estimates
+                       </th>
+                       <th>
+                          Std Error
+                       </th>
+                    </tr>
+                 </thead>
+                 <tbody>
+                    {this.state.table_content}
+                 </tbody>
+                 <tfoot>
+                    <tr>
+                       <td>
+                          Observations
+                       </td>
+                       <td colSpan="2">
+                          {this.state.stats.n}
+                       </td>
+                    </tr>
+                    <tr>
+                       <td>
+                          R<sup>2</sup>
+                       </td>
+                       <td colSpan="2">
+                          {this.state.stats.Rsquare}
+                       </td>
+                    </tr>
+                  </tfoot>
+              </table>
             </div>
           </div>
           <div className="block-7">

@@ -16,30 +16,21 @@ const Papa = require("papaparse/papaparse.min.js");
 
 const Plot = createPlotlyComponent(Plotly);
 
-const steps = {
-  "g": 0.01,
-  "delta": 0.01,
-  "alpha": 0.01,
-  "beta": 0.01,
-}
-
-const gdp_points = [3178.182,3259.97075,3343.54675,3548.4085,3702.94325,3916.2795,4170.74975,4445.853,4567.78075,4792.31475,4942.067,4951.2615,5114.3245,5383.28175,5687.20675,5656.465,5644.843,5948.995,6224.0865,6568.60825,6776.58,6759.18075,6930.71025,6805.758,7117.72875,7632.81225,7951.074,8226.3915,8510.99,8866.49875,9192.134,9365.494,9355.35475,9684.89175,9951.5025,10352.43175,10630.3205,11031.34975,11521.93825,12038.283,12610.49125,13130.9865,13262.07925,13493.0645,13879.1285,14406.3825,14912.50875,15338.25675,15626.0295,15604.6875,16197.0075,16495.3695,16912.03775,17432.17,17730.5085,18144.10475,18687.786,19091.66225]
-
-const cap_points = [14239.895,14711.917,15205.273,15759.578,16361.41,17023.688,17752.528,18530.992,19263.544,20015.188,20760.19,21404.616,22058.784,22805.318,23631.742,24335.552,24870.554,25504.854,26279.792,27203.124,28174.17,28983.3,29770.398,30400.94,31125.588,32101.15,33160.38,34217.176,35245.904,36263.696,37283.484,38223.836,38987.08,39793.464,40663.208,41620.812,42632.688,43758.388,44977.192,46345.16,47827.896,49368.264,50734.812,51925.832,53184,54572.832,56084.492,57575.292,58915.288,59981.816,62435.628,63232.936,64124.208,65057.808,65974.06,66942.704,68007.352,69059.064]
-
+const steps = {}
 
 class App extends React.Component {
   constructor(props) {
     super(props);
     this.filesInput = React.createRef();
     this.state = {
-        params: {
-          "g": 0.02,
-          "delta": 0.03,
-          "alpha": 0.3,
-          "beta": 0.3,
+        params: {},
+        stats: {
+          n: 0,
+          Rsquare: 0
         },
+        table_content: undefined,
         variables: "collapse",
+        reg_results: "collapse",
         database: undefined,
         data: [
           {
@@ -117,7 +108,7 @@ class App extends React.Component {
   }
 
   componentDidMount() {
-    // this.computeRegression();
+    this.importCSV("e",this.updateData);
   }
 
   handleChange(event) {
@@ -129,7 +120,8 @@ class App extends React.Component {
   }
 
   importCSV(event, callback){
-    Papa.parse(event.target.files[0], {
+    var csvFilePath = require("./data.csv");
+    Papa.parse(csvFilePath, {//event.target.files[0] use this and delete previous line
       header: true,
       download: true,
       skipEmptyLines: true,
@@ -150,10 +142,14 @@ class App extends React.Component {
     });
 
     keys = keys[0]
+    var y_var = keys[0]
+    var x_var = keys.slice(1,keys.length)
+    x_var.unshift("(Intercept)")
 
     this.setState({
       database: data,
-      keys: keys,
+      y_var: y_var,
+      x_var: x_var,
       variables: ""
     }, function() {
       // The next step should be to display the different column names and give the possibility of choosing the role of each column (indepent / dependent variable)
@@ -164,30 +160,36 @@ class App extends React.Component {
   }
 
   chooseVars() {
-    console.log(this.state.database,this.state.keys)
+    // Choose:
+    // 1: independent variable
+    // 2: dependent variable to plot
+
+    // Add names of variables to plot to the graph axes and to name of datapoints
+    // const newLayout = Object.assign({}, this.state.layout);
+    // newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
+    // this.setState({
+    //   layout: newLayout
+    // })
   }
 
   computeRegression() {
-    var n = cap_points.length
-    var Y = cap_points
-    var tX = [Array(n).fill(1),gdp_points]
-
-    // var n = this.state.database.length
-    // var Y = subset(this.state.database, index(range(0,n),0))[0]
-    // var tX = [Array(n).fill(1),subset(this.state.database, index(range(0,n),1))[0]]
+    var n = this.state.database.length
+    var p = this.state.x_var.length
+    var Y = subset(this.state.database, index(range(0,n),0)).flat()
+    var cof = subset(this.state.database, index(range(0,n),1)).flat()
+    var tX = [Array(n).fill(1),cof]
 
     var X = transpose(tX)
-    var p = X[0].length
 
     var Sxx = inv(multiply(tX,X))
-    var beta = multiply(multiply(Sxx,tX),cap_points)
+    var beta = multiply(multiply(Sxx,tX),Y)
 
     var Yhat = multiply(X,beta)
     var Ybar = mean(Y)
 
     var ssr = Y.reduce((pV,cV) => pV + (cV - Yhat)^2)
     var sst = Y.reduce((pV,cV) => pV + (cV - Ybar)^2)
-    var Rsquare = 1 - ssr/sst
+    var Rsquare = Math.round(1 - ssr/sst,3)
 
 
     var Vbeta_hat = multiply(ssr/(n-p), diag(Sxx))
@@ -198,11 +200,40 @@ class App extends React.Component {
     partialState.data[0].x = subset(tX, index(1,range(0,n)))[0];
     partialState.data[0].y = Yhat;
 
+    partialState.data[1].x = cof;
+    partialState.data[1].y = Y;
+
+    var table_content = this.state.x_var.map((k,i) => {
+      return (
+        <tr key={i}>
+          <td>
+            {k}
+          </td>
+          <td>
+            {beta[i]}
+          </td>
+          <td>
+            {std_err[i]}
+          </td>
+        </tr>
+      );
+    })
+
+    var stats = {
+      Rsquare: Rsquare,
+      n: n,
+      beta: beta,
+      std_err: std_err
+    }
+
     // See https://github.com/plotly/react-plotly.js#refreshing-the-plot and the discussion here https://github.com/plotly/react-plotly.js/issues/59
     const newLayout = Object.assign({}, this.state.layout);
     newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
     this.setState({
+      reg_results: "",
+      table_content: table_content,
       data: partialState.data,
+      stats: stats,
       layout: newLayout
     })
 
@@ -234,6 +265,44 @@ class App extends React.Component {
             <div id="variables" className={this.state.variables}>
               <button id="reg_btn" className="btn" name="regress" onClick={this.computeRegression}>Regress!</button>
             </div>
+            <div id="reg_results" className={this.state.reg_results}>
+<table id="reg_table">
+  <thead>
+      <tr>
+         <th>
+            Predictors
+         </th>
+         <th>
+            Estimates
+         </th>
+         <th>
+            Std Error
+         </th>
+      </tr>
+   </thead>
+   <tbody>
+      {this.state.table_content}
+   </tbody>
+   <tfoot>
+      <tr>
+         <td>
+            Observations
+         </td>
+         <td colSpan="2">
+            {this.state.stats.n}
+         </td>
+      </tr>
+      <tr>
+         <td>
+            R<sup>2</sup>
+         </td>
+         <td colSpan="2">
+            {this.state.stats.Rsquare}
+         </td>
+      </tr>
+    </tfoot>
+</table>
+            </div>
           </div>
           <div className="block-7">
               <div id="model">
@@ -250,6 +319,8 @@ class App extends React.Component {
     )
   }
 }
+
+
 
 
 const container = document.getElementById('root-ols-regression');

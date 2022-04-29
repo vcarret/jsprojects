@@ -80,7 +80,43 @@ select, button {
 .shocked_var{
     width: 100%;
 }
-#settings,#variables{
+#reg_table{
+    border-collapse: collapse; 
+    border: none;
+    width: 100%;
+}
+
+#reg_table th {
+    text-align:center; 
+    border-bottom:1px solid; 
+    font-style:italic; 
+    font-weight:normal;
+}
+
+#reg_table th:nth-child(1),#reg_table td:nth-child(1){
+    text-align:left; 
+}
+
+#reg_table td {
+    text-align:center;
+    padding:0.2cm;
+    vertical-align:top;
+}
+#reg_table tfoot tr:nth-child(1) td {
+    border-top:2px solid;
+}
+
+#reg_table tfoot td {
+    padding:0.2cm; 
+    text-align:left; 
+    vertical-align:top; 
+    padding-top:0.1cm; 
+    padding-bottom:0.1cm; 
+    border-top:1px solid;
+}
+
+
+#settings,#variables,#reg_results{
 background-color: #cecece;
 border: solid 1px black;
 padding: 5px;

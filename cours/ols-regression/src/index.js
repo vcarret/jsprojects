@@ -10,7 +10,7 @@ import createPlotlyComponent from "react-plotly.js/factory";
 // import 'katex/dist/katex.min.css';
 // import {InlineMath} from 'react-katex';
 // import * as ss from 'simple-statistics'
-import {inv,sqrt,reshape,mean,diag,round,subset,index,range,multiply,transpose} from 'mathjs';
+import {inv,sqrt,reshape,concat,mean,diag,round,subset,index,range,multiply,transpose} from 'mathjs';
 
 const Papa = require("papaparse/papaparse.min.js");
 
@@ -37,7 +37,7 @@ class App extends React.Component {
             y: [],// u
             type: 'scatter',
             mode: 'lines+markers',
-            name: "regression",
+            name: "",
             line: {
               color: "black"
             },
@@ -114,7 +114,7 @@ class App extends React.Component {
     let partialState = Object.assign({}, this.state);
     partialState.params[event.target.name] = event.target.value;
     this.setState(partialState, function() {
-      this.chooseVars()
+      this.chooseVars(event.target.name)
     });
   }
 
@@ -131,6 +131,7 @@ class App extends React.Component {
   };
 
   updateData(results){
+    // This function is called when the data is loaded
     var keys = [];
     var data = [];
 
@@ -171,17 +172,14 @@ class App extends React.Component {
       // The next step should be to display the different column names and give the possibility of choosing the role of each column (indepent / dependent variable)
       // Eventually give more options, like the kind of fit you want, the form of the model, etc.
       // Also display a new button to compute the regression after the choice has been made
-      this.chooseVars();
+      this.chooseVars("ind_var");
     }); 
   }
 
-  chooseVars() {
-    // Choose:
-    // 1: independent variable
-    // 2: dependent variable to plot
-    // Add names of variables to plot to the graph axes and to name of datapoints
-
+  chooseVars(changed_var) {
+    // Function is called when the ind. var. or the var. to plot against it are changed. It updates the legend and axes names of the plot, the data points and the regression line.
     var n = this.state.database.length
+    var p = this.state.keys.length
 
     // Find the column index from the user's selection
     let col_ind = this.state.keys.indexOf(this.state.params.ind_var)
@@ -195,12 +193,35 @@ class App extends React.Component {
     partialState.data[1].y = Y;
     partialState.data[1].name = this.state.params.ind_var + "~" + this.state.params.plot_var
 
+    partialState.data[0].name = p > 2 ? "(conditional) regression line" : "regression line"
+
     const newLayout = Object.assign({}, this.state.layout);
     newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
     newLayout.yaxis.title = this.state.params.ind_var
     newLayout.xaxis.title = this.state.params.plot_var
 
+    // If the regression has been run, update the regression line
+    if (this.state.reg_results === "") {
+      var ind = [...Array(p).keys()]
+      ind.splice(col_ind,1)
+
+      let keys_cof = ind.map(i => this.state.keys[i])
+      let col_plot = keys_cof.indexOf(this.state.params.plot_var)+1
+      
+      // Possibly should subset intercept and beta to avoid unnecessary multiplication, or X to avoid one mean computation, but with only one cofactor this will create new problems
+      // The conditional intercept is the sum of the inner product of beta and the means of the other cofactors (those not plotted)
+      let intercept = mean(this.state.X,0)
+      intercept = multiply(intercept,this.state.beta)-this.state.beta[col_plot]*intercept[col_plot]
+
+      partialState.data[0].x = cof;
+      partialState.data[0].y = cof.map(i => intercept + this.state.beta[col_plot]*i);
+    }
+
+    // When the variable changed is the independent variable, the regression should be restarted 
+    // let reg_results = changed_var === "ind_var" ? "collapse" : ""
+
     this.setState({
+      // reg_results: reg_results,
       data: partialState.data,
       layout: newLayout
     })
@@ -208,20 +229,22 @@ class App extends React.Component {
 
   computeRegression() {
     var n = this.state.database.length
-    // Find away to avoid redundacy with chooseVars function
+    // Find a way to avoid redundacy with chooseVars function
     let col_ind = this.state.keys.indexOf(this.state.params.ind_var)
     var Y = subset(this.state.database, index([...Array(n).keys()],col_ind)).flat()
-    console.log(Y)
+    
+    // p is the number of cofactors, ind is the indices of cofactor variables
     var p = this.state.keys.length
     var ind = [...Array(p).keys()]
     ind.splice(col_ind,1)
 
+    // The cofactor matrix is bordered with ones for the intercept
     var cof = subset(this.state.database, index([...Array(n).keys()],ind))
-    console.log(reshape(transpose(cof).flat(),[n,p-1]))
-    var tX = [Array(n).fill(1),reshape(transpose(cof).flat(),[n,p-1])]
+    var ones = Array(n).fill(Array(1).fill(1))
+    var X = concat(ones,cof)
+    var tX = transpose(X)
 
-    var X = transpose(tX)
-
+    // Standard matrix solution of OLS problem
     var Sxx = inv(multiply(tX,X))
     var beta = multiply(multiply(Sxx,tX),Y)
 
@@ -232,20 +255,28 @@ class App extends React.Component {
     var sst = Y.reduce((pV,cV) => pV + (cV - Ybar)**2,0)
     var Rsquare = 1 - ssr/sst
 
+    // n-p degrees of freedom
     var Vbeta_hat = multiply(ssr/(n-p), diag(Sxx))
     var std_err = sqrt(Vbeta_hat)
-    // console.log(std_err)
+    console.log(n-p)
 
     let partialState = Object.assign({}, this.state);
-    let col_plot = this.state.keys.indexOf(this.state.params.plot_var)
-    partialState.data[0].x = subset(this.state.database, index(range(0,n),col_plot)).flat()
-    partialState.data[0].y = Yhat;
+    // Find the right key for the cofactor selected on the plot and plot the conditional regression line
+    let keys_cof = ind.map(i => this.state.keys[i])
+    let col_plot = keys_cof.indexOf(this.state.params.plot_var)+1
 
-    var x_var = JSON.parse(JSON.stringify(this.state.keys))
-    x_var.splice(col_ind,1)
-    x_var.unshift("(Intercept)")
+    let intercept = mean(X,0)
+    intercept = multiply(intercept,beta)-beta[col_plot]*intercept[col_plot]
 
-    var table_content = x_var.map((k,i) => {
+    let X_var = subset(X, index(range(0,n),col_plot)).flat()
+    partialState.data[0].x = X_var;
+    partialState.data[0].y = X_var.map(i => intercept + beta[col_plot]*i);
+
+    // var x_var = JSON.parse(JSON.stringify(this.state.keys))
+    // x_var.splice(col_ind,1)
+    keys_cof.unshift("(Intercept)")
+
+    var table_content = keys_cof.map((k,i) => {
       return (
         <tr key={i}>
           <td>
@@ -271,6 +302,8 @@ class App extends React.Component {
     newLayout.datarevision = (partialState.layout.datarevision + 1) % 10;
 
     this.setState({
+      beta: beta,
+      X: X,
       reg_results: "",
       table_content: table_content,
       stats: stats,

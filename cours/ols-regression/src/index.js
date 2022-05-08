@@ -121,29 +121,54 @@ class App extends React.Component {
   }
 
   importCSV(event, callback){
-    Papa.parse(event.target.files[0], {
-      header: true,
-      download: true,
-      skipEmptyLines: true,
-      complete: function(results) {    
-        callback(results)
-      }
-    });
+    if(typeof event.target.files[0] !== "undefined"){
+      let partialState = Object.assign({}, this.state);
+      partialState.data[0].x = []
+      partialState.data[0].y = []
+      partialState.data[1].x = []
+      partialState.data[1].y = []
+
+      this.setState({
+        variables: "collapse",
+        reg_results: "collapse",
+        data: partialState.data,
+      }, function() {
+        Papa.parse(event.target.files[0], {
+          // header: true,
+          skipEmptyLines: true,
+          complete: function(results) {    
+            callback(results)
+          }
+        });
+      });
+    }
   };
 
   updateData(results){
     // This function is called when the data is loaded
-    var keys = [];
-    var data = [];
+    var tmp = results.data[0];
+    var keys = []
+    let ind_num = []
 
-    // Iterating data to get column name and their values
-    results.data.map((d) => {
-      keys.push(Object.keys(d));
-      data.push(Object.values(d));
-      return null
-    });
+    // Select only numeric columns
+    for(let i = 0; i< tmp.length; i++) {
+      if(!isNaN(results.data[1][i])){
+        ind_num.push(i)
+        keys.push(tmp[i])
+      }
+    }
 
-    keys = keys[0]
+    var data = subset(results.data, index(range(1,results.data.length),ind_num));
+
+    // // Iterating data to get column name and their values
+    // results.data.map((d) => {
+    //   keys.push(Object.keys(d));
+    //   data.push(Object.values(d));
+    //   return null
+    // });
+
+    // keys = keys[0]
+
 
     // Loop through the keys to add to the dropdown menu
     var ind_var_choices = keys.map((k,i) => {
@@ -174,7 +199,7 @@ class App extends React.Component {
       // The next step should be to display the different column names and give the possibility of choosing the role of each column (indepent / dependent variable)
       // Eventually give more options, like the kind of fit you want, the form of the model, etc.
       // Also display a new button to compute the regression after the choice has been made
-      this.chooseVars("ind_var");
+      this.chooseVars("dep_var");
     }); 
   }
 
@@ -219,13 +244,14 @@ class App extends React.Component {
       partialState.data[0].y = cof.map(i => intercept + this.state.beta[col_plot]*i);
     }
 
-    // When the variable changed is the independent variable, the regression should be restarted 
-    // let reg_results = changed_var === "ind_var" ? "collapse" : ""
-
     this.setState({
-      // reg_results: reg_results,
       data: partialState.data,
       layout: newLayout
+    }, function() {
+      // When the variable changed is the independent variable, and the regression has already been run, the regression should be restarted 
+      if(changed_var === "ind_var" & this.state.reg_results !== "collapse"){
+        this.computeRegression()
+      }
     })
   }
 
@@ -353,7 +379,7 @@ class App extends React.Component {
                 <div className="entry">
                   <label>
                     Independent Variable:  
-                    <select name="ind_var" onChange={this.handleChange}>
+                    <select name="ind_var" value={this.state.params.ind_var} onChange={this.handleChange}>
                       {this.state.ind_var_choices}
                     </select>
                   </label>
